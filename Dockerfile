@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies + TA-Lib build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
@@ -17,9 +17,11 @@ RUN apt-get update && apt-get install -y \
     git \
     libffi-dev \
     libssl-dev \
+    libta-lib0 \
+    libta-lib-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies (including TA-Lib Python wrapper)
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
