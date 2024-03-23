@@ -116,7 +116,7 @@ def log_signal_to_db(signal, price, symbol, executed=True):
                 'symbol': symbol,
                 'strategy': signal['strategy'],
                 'action': signal['action'],
-                'price': price,
+                'price': float(price),
                 'reason': signal['reason'],
                 'executed': executed
             })

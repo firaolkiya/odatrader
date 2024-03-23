@@ -1,0 +1,62 @@
+from fastapi import FastAPI
+import threading
+import subprocess
+import os
+from pathlib import Path
+import time
+from fastapi.responses import PlainTextResponse, JSONResponse
+
+app = FastAPI()
+
+# === Config ===
+BOT_SCRIPT = "scalping_bot_framework.py"
+LOG_FILE = "bot.log"
+RUNNING_FLAG = False
+BOT_PROCESS = None
+
+
+# === Helper to launch the bot ===
+def launch_bot():
+    global BOT_PROCESS, RUNNING_FLAG
+    with open(LOG_FILE, "a") as logf:
+        BOT_PROCESS = subprocess.Popen(
+            ["python", BOT_SCRIPT], stdout=logf, stderr=subprocess.STDOUT
+        )
+        RUNNING_FLAG = True
+
+
+# === API Routes ===
+@app.post("/start")
+def start_bot():
+    global RUNNING_FLAG
+    if RUNNING_FLAG:
+        return JSONResponse(content={"message": "Bot already running"}, status_code=200)
+
+    thread = threading.Thread(target=launch_bot)
+    thread.start()
+    time.sleep(2)  # allow startup
+    return JSONResponse(content={"message": "Bot started"}, status_code=200)
+
+
+@app.post("/stop")
+def stop_bot():
+    global BOT_PROCESS, RUNNING_FLAG
+    if BOT_PROCESS:
+        BOT_PROCESS.terminate()
+        BOT_PROCESS.wait()
+        RUNNING_FLAG = False
+        return JSONResponse(content={"message": "Bot stopped"}, status_code=200)
+    return JSONResponse(content={"message": "Bot not running"}, status_code=200)
+
+
+@app.get("/status")
+def get_status():
+    return JSONResponse(content={"status": "running" if RUNNING_FLAG else "stopped"})
+
+
+@app.get("/logs", response_class=PlainTextResponse)
+def get_logs():
+    if not Path(LOG_FILE).exists():
+        return PlainTextResponse("Log file not found", status_code=404)
+    with open(LOG_FILE, "r") as f:
+        return f.read()

@@ -18,7 +18,7 @@ SYMBOL_LIST = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 
 # === STREAMLIT SETUP ===
 st.set_page_config(page_title="📊 Trading Bot Dashboard", layout="wide")
-st_autorefresh(interval=10_000, key="refresh")  # Refresh every 10 seconds
+st_autorefresh(interval=10_000, key="refresh")
 st.sidebar.header("⚙️ Controls")
 
 symbol = st.sidebar.selectbox("Symbol", SYMBOL_LIST, index=0)
@@ -32,7 +32,7 @@ engine = create_engine(DATABASE_URL)
 utc = pytz.UTC
 
 # === FUNCTIONS ===
-def load_market_data(symbol, interval="1m", limit=2000):
+def load_market_data(symbol, interval="1m", limit=1000):
     try:
         url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
         response = requests.get(url)
@@ -45,10 +45,10 @@ def load_market_data(symbol, interval="1m", limit=2000):
             'num_trades', 'taker_buy_base', 'taker_buy_quote', 'ignore'
         ])
 
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize('UTC')
         df = df.astype({'open': float, 'high': float, 'low': float, 'close': float})
+        df = df.sort_values('timestamp').drop_duplicates('timestamp')
         return df[['timestamp', 'open', 'high', 'low', 'close']]
-
     except Exception as e:
         st.error(f"❌ Binance API error: {e}")
         return pd.DataFrame()
@@ -70,7 +70,6 @@ def load_signals(strategy=None, symbol=None):
         df = pd.read_sql(query, engine)
         df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
         return df
-
     except Exception as e:
         st.error(f"❌ Failed to load signals: {e}")
         return pd.DataFrame()
@@ -91,7 +90,6 @@ def calculate_pnl(symbol=None):
         trade_count = df[df['net_pnl'].notnull()].shape[0]
         balance = STARTING_BALANCE + pnl_total
         return balance, pnl_total, trade_count
-
     except Exception as e:
         st.error(f"❌ Failed to calculate PnL: {e}")
         return STARTING_BALANCE, 0, 0
@@ -135,12 +133,31 @@ def plot_candlestick(df, signals):
             textposition="bottom center"
         ))
 
+    # Zoom range for X-axis
+    zoom_size = {
+        "1m": 100,
+        "5m": 100,
+        "15m": 96,
+        "1h": 72,
+        "4h": 60,
+        "1d": 30,
+    }.get(interval, 10)
+
+    if len(df) > zoom_size:
+        x_range = [df['timestamp'].iloc[-zoom_size], df['timestamp'].iloc[-1]]
+    else:
+        x_range = [df['timestamp'].iloc[0], df['timestamp'].iloc[-1]]
+
+    # === DYNAMIC Y-AXIS RANGE ===
+    latest_close = df['close'].iloc[-1]
+    y_min = latest_close - (0.005 * latest_close)
+    y_max = latest_close + (0.005 * latest_close)
+
     fig.update_layout(
         template="plotly_dark",
         title=f"{symbol} Price Chart + Executed Signals",
-        xaxis_title="Time",
-        yaxis_title="Price (USDT)",
-        xaxis_rangeslider_visible=False,
+        xaxis=dict(title="Time", range=x_range, rangeslider_visible=False),
+        yaxis=dict(title="Price (USDT)", range=[y_min, y_max]),
         hovermode="x unified",
         height=600,
         margin=dict(l=10, r=10, t=50, b=20),
