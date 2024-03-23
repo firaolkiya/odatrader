@@ -1,10 +1,13 @@
 import os, sys, time
 from datetime import datetime, timezone
 import pandas as pd
-import talib
+import ta
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine, text
 from binance import ThreadedWebsocketManager
+import ta.momentum
+import ta.trend
+import ta.volatility
 
 # === Path Fixes ===
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -76,15 +79,17 @@ def load_features(symbol):
         return df
 
     df.sort_values('timestamp', inplace=True)
-    df['rsi'] = talib.RSI(df['close'], timeperiod=14)
-    df['ema_fast'] = talib.EMA(df['close'], timeperiod=9)
-    df['ema_slow'] = talib.EMA(df['close'], timeperiod=21)
-    macd, macdsignal, _ = talib.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-    df['macd'] = macd
-    df['macd_signal'] = macdsignal
-    upper, middle, lower = talib.BBANDS(df['close'], timeperiod=20)
-    df['bb_upper'] = upper
-    df['bb_lower'] = lower
+    df["rsi"] = ta.momentum.RSIIndicator(close=df["close"], window=14).rsi()
+    df["ema_fast"] = ta.trend.EMAIndicator(close=df['close'], window=9).ema_indicator()
+    df['ema_slow'] = ta.trend.EMAIndicator(close=df['close'], window=21).ema_indicator()
+
+    macd = ta.trend.MACD(close=df['close'], window_fast=22, window_slow=26, window_sign=9)
+    df['macd'] = macd.macd()
+    df['macd_signal'] = macd.macd_signal()
+
+    bb = ta.volatility.BollingerBands(close=df['close'], window=20)
+    df['bb_upper'] = bb.bollinger_hband()
+    df['bb_lower'] = bb.bollinger_lband()
     return df
 
 # === Log Executed Signal Only ===

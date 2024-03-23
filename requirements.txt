@@ -13,7 +13,7 @@ streamlit-autorefresh
 
 # Binance API
 python-binance
-TA-Lib
+ta
 
 # Scheduler
 apscheduler
