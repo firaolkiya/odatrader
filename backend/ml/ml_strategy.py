@@ -1,8 +1,11 @@
 import pandas as pd
 import joblib
-import talib
+import ta
 from sqlalchemy import create_engine
 from datetime import timezone, datetime
+
+import ta.momentum
+import ta.trend
 
 # Load model and scaler once
 model = joblib.load("models/lightgbm_model.pkl")
@@ -22,14 +25,14 @@ def evaluate_ml_strategy():
 
         df.sort_values('timestamp', inplace=True)
 
-        # 2. Compute indicators
-        df['rsi'] = talib.RSI(df['close'], timeperiod=14)
-        df['ema_fast'] = talib.EMA(df['close'], timeperiod=9)
-        df['ema_slow'] = talib.EMA(df['close'], timeperiod=21)
-        macd, macdsignal, _ = talib.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        df['macd'] = macd
-        df['macd_signal'] = macdsignal
-        df['volume'] = df['volume'].astype(float)
+        # 2. Computindicators
+        df['rsi'] = ta.momentum.RSIIndicator(close=df['close'], window=14).rsi()
+        df['ema_fast'] = ta.trend.EMAIndicator(close=df['close'], window=9).ema_indicator()
+        df['ema_slow'] = ta.trend.EMAIndicator(close=df['close'], window=21).ema_indicator()
+
+        macd_ind = ta.trend.MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
+        df['macd'] = macd_ind.macd()
+        df['macd_signal'] = macd_ind.macd_signal()
 
         # 3. Latest row for prediction
         latest = df.iloc[-1]
