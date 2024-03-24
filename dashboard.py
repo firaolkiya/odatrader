@@ -16,6 +16,8 @@ DB_NAME = 'postgres'
 STARTING_BALANCE = 50000
 SYMBOL_LIST = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 
+API_BASE = "http://localhost:8000"  # use http://localhost:8000 if outside Docker
+
 # === STREAMLIT SETUP ===
 st.set_page_config(page_title="📊 Trading Bot Dashboard", layout="wide")
 st_autorefresh(interval=10_000, key="refresh")
@@ -31,7 +33,9 @@ DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{
 engine = create_engine(DATABASE_URL)
 utc = pytz.UTC
 
-# === FUNCTIONS ===
+
+
+# === DATA LOADERS ===
 def load_market_data(symbol, interval="1m", limit=1000):
     try:
         url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
@@ -94,6 +98,7 @@ def calculate_pnl(symbol=None):
         st.error(f"❌ Failed to calculate PnL: {e}")
         return STARTING_BALANCE, 0, 0
 
+# === CANDLE PLOT ===
 def plot_candlestick(df, signals):
     if df.empty:
         return go.Figure()
@@ -133,7 +138,6 @@ def plot_candlestick(df, signals):
             textposition="bottom center"
         ))
 
-    # Zoom range for X-axis
     zoom_size = {
         "1m": 100,
         "5m": 100,
@@ -148,7 +152,6 @@ def plot_candlestick(df, signals):
     else:
         x_range = [df['timestamp'].iloc[0], df['timestamp'].iloc[-1]]
 
-    # === DYNAMIC Y-AXIS RANGE ===
     latest_close = df['close'].iloc[-1]
     y_min = latest_close - (0.005 * latest_close)
     y_max = latest_close + (0.005 * latest_close)
@@ -166,12 +169,11 @@ def plot_candlestick(df, signals):
 
     return fig
 
-# === LOAD DATA ===
+# === LOAD & DISPLAY ===
 market_df = load_market_data(symbol, interval)
 signals_df = load_signals(strategy_filter, symbol)
 balance, pnl, trades = calculate_pnl(None if view_all else symbol)
 
-# === DISPLAY ===
 st.subheader("📈 Price Chart & Executed Signals")
 st.plotly_chart(plot_candlestick(market_df, signals_df), use_container_width=True)
 
@@ -180,6 +182,9 @@ col1.metric("💰 Balance", f"${balance:,.2f}")
 col2.metric("📈 Net PnL", f"${pnl:,.2f}")
 col3.metric("📊 Trades", f"{trades}")
 
+
+
+# === SIGNAL TABLE ===
 st.subheader("📋 Executed Strategy Signals")
 if not signals_df.empty:
     st.dataframe(signals_df[['timestamp', 'strategy', 'action', 'price', 'reason']], use_container_width=True)
