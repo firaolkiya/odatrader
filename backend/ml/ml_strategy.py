@@ -1,69 +1,129 @@
-import pandas as pd
+import os
 import joblib
-from ta.momentum import RSIIndicator
-from ta.trend import EMAIndicator, MACD
-from backend.strategies.base_strategy import BaseStrategy
+import pandas as pd
+import numpy as np
+from typing import Dict, Union
+from lightgbm import LGBMRegressor
+from sklearn.preprocessing import StandardScaler
+import talib
 
-class MLStrategy(BaseStrategy):
-    def __init__(self):
-        super().__init__(name="ML")
-        self.model = joblib.load("models/lightgbm_model.pkl")
-        self.scaler = joblib.load("models/scaler.pkl")
+class MLStrategy:
+    """
+    Machine Learning Trading Strategy using LightGBM models trained by train_lightgbm.py
+    
+    Features:
+    - RSI, EMAs, MACD indicators
+    - Lagged price/volume features
+    - StandardScaler normalization
+    - Predicts 3-candle future price change
+    """
+    
+    def __init__(self, symbol: str = "btcusdt"):
+        self.symbol = symbol.lower()
+        self.name = "MLStrategy"
+        self.model: LGBMRegressor = None
+        self.feature_list: list = None
+        self.scaler: StandardScaler = None
+        self._load_model_and_features()
+        
+    def _load_model_and_features(self) -> None:
+        """Load trained model, features, and scaler from disk"""
+        base_path = "backend/ml/models"
+        model_path = os.path.join(base_path, f"lightgbm_price_model_{self.symbol}.pkl")
+        features_path = os.path.join(base_path, f"lightgbm_features_{self.symbol}.pkl")
+        scaler_path = os.path.join(base_path, f"lightgbm_scaler_{self.symbol}.pkl")
 
-    def generate_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df.sort_values('timestamp', inplace=True)
+        if not all(os.path.exists(p) for p in [model_path, features_path, scaler_path]):
+            raise FileNotFoundError(f"Model files missing for {self.symbol}")
 
-        df['rsi'] = RSIIndicator(close=df['close'], window=14).rsi()
-        df['ema_fast'] = EMAIndicator(close=df['close'], window=9).ema_indicator()
-        df['ema_slow'] = EMAIndicator(close=df['close'], window=21).ema_indicator()
-
-        macd = MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
-        df['macd'] = macd.macd()
-        df['macd_signal'] = macd.macd_signal()
+        self.model = joblib.load(model_path)
+        self.feature_list = joblib.load(features_path)
+        self.scaler = joblib.load(scaler_path)
+        
+    def _generate_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Generate technical indicators matching training features"""
+        # Technical Indicators
+        df['rsi'] = talib.RSI(df['close'], timeperiod=14)
+        df['ema_fast'] = talib.EMA(df['close'], timeperiod=9)
+        df['ema_slow'] = talib.EMA(df['close'], timeperiod=21)
+        macd, signal, _ = talib.MACD(df['close'])
+        df['macd'] = macd
+        df['macd_signal'] = signal
+        
+        # Lag Features (matches training)
+        for lag in [1, 2, 3, 5, 10]:
+            df[f'close_lag_{lag}'] = df['close'].shift(lag)
+            df[f'volume_lag_{lag}'] = df['volume'].shift(lag)
+            
+        df.fillna(method='bfill', inplace=True)
         return df
-
-    def generate_signal(self, df: pd.DataFrame, symbol: str = None) -> str:
+    
+    def evaluate(self, market_data: Union[pd.DataFrame, pd.Series]) -> Dict[str, str]:
         """
-        Generates a signal using the most recent row from the dataframe.
+        Evaluate market data and return trading decision
+        
+        Args:
+            market_data: Latest market data (DataFrame or Series)
+                         Must contain: ['open', 'high', 'low', 'close', 'volume']
+        
+        Returns:
+            Dictionary with trading decision:
+            {
+                "action": "buy|sell|hold",
+                "strategy": "MLStrategy",
+                "reason": str
+            }
         """
         try:
-            if df.empty or len(df) < 30:
-                print(f"[MLStrategy:{symbol}] ⚠️ Not enough data for prediction.")
-                return "hold"
-
-            df = self.generate_features(df)
-            latest = df.iloc[-1]
-            features = latest[['rsi', 'ema_fast', 'ema_slow', 'macd', 'macd_signal', 'volume']].to_frame().T
-
-            X = self.scaler.transform(features)
-            predicted_return = self.model.predict(X)[0]
-
-            print(f"[MLStrategy:{symbol}] Predicted return: {predicted_return:.2f}%")
-
-            if predicted_return >= 0.5:
-                return "buy"
-            elif predicted_return <= -0.5:
-                return "sell"
+            # Convert input to proper DataFrame format
+            if isinstance(market_data, pd.Series):
+                df = market_data.to_frame().T
             else:
-                return "hold"
-
+                df = market_data.copy()
+                
+            # Generate all required features
+            df = self._generate_features(df)
+            
+            # Select only the features used in training
+            input_df = df[self.feature_list].tail(1)
+            
+            if input_df.empty or input_df.isnull().any().any():
+                return {
+                    "action": "hold",
+                    "strategy": self.name,
+                    "reason": "Missing/invalid features"
+                }
+            
+            # Scale features and make prediction
+            input_scaled = self.scaler.transform(input_df)
+            predicted_change = self.model.predict(input_scaled)[0]
+            
+            # Trading logic
+            threshold = 0.002  # 0.2% change threshold
+            
+            if predicted_change > threshold:
+                return {
+                    "action": "buy",
+                    "strategy": self.name,
+                    "reason": f"Predicted +{predicted_change:.2%} gain"
+                }
+            elif predicted_change < -threshold:
+                return {
+                    "action": "sell",
+                    "strategy": self.name,
+                    "reason": f"Predicted {predicted_change:.2%} loss"
+                }
+            else:
+                return {
+                    "action": "hold",
+                    "strategy": self.name,
+                    "reason": f"Neutral ({predicted_change:.4%})"
+                }
+                
         except Exception as e:
-            print(f"[MLStrategy:{symbol}] ❌ Error: {e}")
-            return "hold"
+            return {
+                "action": "hold",
+                "strategy": self.name,
+                "reason": f"Error: {str(e)}"
+            }
 
-    def evaluate(self, row=None, prev_row=None, df: pd.DataFrame = None, symbol: str = None):
-        """
-        Evaluate using recent DataFrame or row.
-        If df is provided, it uses ML prediction. Otherwise, it returns None.
-        """
-        if df is None:
-            return None
-
-        signal = self.generate_signal(df, symbol)
-        if signal == "buy":
-            return {'action': 'BUY', 'reason': 'ML model predicted strong upward movement', 'strategy': self.name}
-        elif signal == "sell":
-            return {'action': 'SELL', 'reason': 'ML model predicted strong downward movement', 'strategy': self.name}
-        else:
-            return None

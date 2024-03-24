@@ -10,13 +10,14 @@ class RSIStrategy(BaseStrategy):
 
     def evaluate(self, row, prev_row=None):
         try:
-            rsi = row.get('rsi', None)
-            symbol = row.get('symbol')
+            # Safely extract values
+            rsi = float(row['rsi']) if 'rsi' in row and row['rsi'] == row['rsi'] else None
+            symbol = row['symbol'] if 'symbol' in row else None
 
-            if rsi is None or rsi != rsi:  # NaN check
+            if rsi is None:
                 return None
 
-            # Threshold logic — using 40/60 for moderate signals, 30/70 for stronger ones
+            # Main RSI signals
             if rsi < 30:
                 return {
                     'action': 'BUY',
@@ -32,10 +33,10 @@ class RSIStrategy(BaseStrategy):
                     'symbol': symbol
                 }
 
-            # Cross detection (optional)
-            if prev_row:
-                prev_rsi = prev_row.get('rsi', None)
-                if prev_rsi is not None and prev_rsi == prev_rsi:
+            # Cross logic
+            if prev_row is not None and 'rsi' in prev_row:
+                prev_rsi = float(prev_row['rsi']) if prev_row['rsi'] == prev_row['rsi'] else None
+                if prev_rsi is not None:
                     if prev_rsi > 30 and rsi < 30:
                         return {
                             'action': 'BUY',

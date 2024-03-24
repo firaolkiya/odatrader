@@ -1,44 +1,103 @@
-# backend/strategy/strategy_voter.py
-import os,sys
+# backend/strategies/strategy_voter.py
+
+import os
+import sys
+from typing import Dict, List
+import pandas as pd
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.strategies.rsi_strategy import RSIStrategy
 from backend.strategies.macd_strategy import MACDStrategy
-from backend.strategies.bb_strategy import BollingerBandsStrategy
+from backend.strategies.bb_strategy import BollingerStrategy
 from backend.strategies.ema_crossover import EMACrossoverStrategy
 from backend.ml.ml_strategy import MLStrategy
 
 class StrategyVoter:
-    def __init__(self):
-        self.strategies = [
+    def __init__(self, symbol: str = "btcusdt"):
+        """
+        Initialize strategy voter with both technical and ML strategies
+        
+        Args:
+            symbol: Trading pair symbol (e.g., "btcusdt")
+        """
+        self.symbol = symbol.lower()
+        self.strategies = self._initialize_strategies()
+        
+    def _initialize_strategies(self) -> List:
+        """Initialize all strategies with proper configuration"""
+        return [
             RSIStrategy(),
             MACDStrategy(),
             EMACrossoverStrategy(),
-            BollingerBandsStrategy(),
-            MLStrategy()
+            BollingerStrategy(),
+            MLStrategy(symbol=self.symbol)  # ML strategy gets the symbol
         ]
-
-
-    def get_final_signal(self, df) -> str:
+    
+    def get_final_signal(self, df: pd.DataFrame) -> str:
+        """
+        Collect signals from all strategies and return consensus decision
+        
+        Args:
+            df: DataFrame with market data (must contain at least 2 rows)
+            
+        Returns:
+            "BUY", "SELL", or "HOLD" based on majority vote
+        """
         votes = {"BUY": 0, "SELL": 0, "HOLD": 0}
-
+        
         if len(df) < 2:
-            print("[StrategyVoter] Not enough data to evaluate.")
+            print("[StrategyVoter] Warning: Not enough data to evaluate (need min 2 rows)")
             return "HOLD"
-
-        latest = df.iloc[-1]
+            
+        print("\n[StrategyVoter] Individual Strategy Signals:")
+        current = df.iloc[-1]
         previous = df.iloc[-2]
-
+        
         for strategy in self.strategies:
             try:
-                result = strategy.evaluate(latest, previous)
-                if result and result.get("action"):
-                    action = result["action"].upper()
-                    if action in votes:
-                        votes[action] += 1
+                strategy_name = getattr(strategy, 'name', strategy.__class__.__name__)
+                
+                # Special handling for MLStrategy
+                if isinstance(strategy, MLStrategy):
+                    result = strategy.evaluate(df)  # ML needs full DataFrame
+                else:
+                    result = strategy.evaluate(current, previous)  # Tech indicators
+                
+                # Standardize result parsing
+                action = self._parse_strategy_result(result)
+                votes[action] += 1
+                
+                reason = result.get("reason", "No reason") if isinstance(result, dict) else "-"
+                print(f" - {strategy_name}: {action} → {reason}")
+                
             except Exception as e:
-                print(f"[StrategyVoter] Strategy {strategy.name} error: {e}")
-
+                print(f" - {strategy_name}: ERROR → {str(e)}")
+                votes["HOLD"] += 1
+                
         final = max(votes, key=votes.get)
-        print(f"[StrategyVoter] Votes: {votes} → Final Signal: {final}")
+        print(f"\n[StrategyVoter] Votes Summary: {votes} → Final Signal: {final}")
         return final
+        
+    def _parse_strategy_result(self, result) -> str:
+        """
+        Standardize strategy outputs to BUY/SELL/HOLD
+        
+        Args:
+            result: Raw strategy output (dict or other format)
+            
+        Returns:
+            Standardized action string
+        """
+        if not result:
+            return "HOLD"
+            
+        if isinstance(result, dict):
+            action = result.get("action", "HOLD").upper()
+            return action if action in ["BUY", "SELL"] else "HOLD"
+            
+        if isinstance(result, str):
+            return result.upper() if result.upper() in ["BUY", "SELL"] else "HOLD"
+            
+        return "HOLD"
+

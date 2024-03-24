@@ -1,35 +1,30 @@
-# backend/strategies/bb_strategy.py
+# backend/strategies/bollinger_strategy.py
 import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from .base_strategy import BaseStrategy
-import pandas as pd
 
-class BollingerBandsStrategy(BaseStrategy):
+class BollingerStrategy(BaseStrategy):
     def __init__(self):
-        super().__init__(name="Bollinger_Bands")
+        super().__init__(name="Bollinger")
 
-    def evaluate(self, row: dict, prev_row: dict = None):
+    def evaluate(self, row, prev_row=None):
         try:
-            bb_upper = row.get('bb_upper')
-            bb_lower = row.get('bb_lower')
-            close = row.get('close')
-            symbol = row.get('symbol')
+            close = float(row['close']) if 'close' in row and row['close'] == row['close'] else None
+            bb_upper = float(row['bb_upper']) if 'bb_upper' in row and row['bb_upper'] == row['bb_upper'] else None
+            bb_lower = float(row['bb_lower']) if 'bb_lower' in row and row['bb_lower'] == row['bb_lower'] else None
+            symbol = row['symbol'] if 'symbol' in row else None
 
-            # Ensure scalar (not Series) values
-            if any(pd.isna(val) for val in [bb_upper, bb_lower, close]):
+            if close is None or bb_upper is None or bb_lower is None:
                 return None
 
-            # Reversion Buy Signal
-            if prev_row:
-                prev_close = prev_row.get('close')
-                prev_bb_lower = prev_row.get('bb_lower')
-                prev_bb_upper = prev_row.get('bb_upper')
+            # Mean Reversion Buy: price bounces above lower band
+            if prev_row is not None:
+                prev_close = float(prev_row['close']) if 'close' in prev_row and prev_row['close'] == prev_row['close'] else None
+                prev_bb_lower = float(prev_row['bb_lower']) if 'bb_lower' in prev_row and prev_row['bb_lower'] == prev_row['bb_lower'] else None
+                prev_bb_upper = float(prev_row['bb_upper']) if 'bb_upper' in prev_row and prev_row['bb_upper'] == prev_row['bb_upper'] else None
 
-                if any(pd.isna(val) for val in [prev_close, prev_bb_lower, prev_bb_upper]):
-                    return None
-
-                if close > bb_lower and prev_close < prev_bb_lower:
+                if prev_close is not None and prev_bb_lower is not None and close > bb_lower and prev_close < prev_bb_lower:
                     return {
                         'action': 'BUY',
                         'reason': 'Price bounced above lower Bollinger Band (reversion)',
@@ -37,7 +32,8 @@ class BollingerBandsStrategy(BaseStrategy):
                         'symbol': symbol
                     }
 
-                elif close < bb_upper and prev_close > prev_bb_upper:
+                # Mean Reversion Sell: price drops below upper band
+                if prev_close is not None and prev_bb_upper is not None and close < bb_upper and prev_close > prev_bb_upper:
                     return {
                         'action': 'SELL',
                         'reason': 'Price dropped below upper Bollinger Band (reversion)',
@@ -46,6 +42,6 @@ class BollingerBandsStrategy(BaseStrategy):
                     }
 
         except Exception as e:
-            print(f"[{self.name} Error] {e}")
+            print(f"[{self.name} Strategy Error] {e}")
 
         return None

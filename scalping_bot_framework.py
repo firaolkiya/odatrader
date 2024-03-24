@@ -33,7 +33,8 @@ engine = create_engine(DB_URI)
 
 # === Engine + Voter ===
 execution_engine = ExecutionEngine(starting_balance=STARTING_BALANCE, engine=engine)
-voter = StrategyVoter()
+voter = {symbol: StrategyVoter(symbol) for symbol in SYMBOLS}
+
 
 # === Store OHLCV to DB ===
 def store_to_db(symbol, candle):
@@ -118,7 +119,7 @@ def log_signal_to_db(signal, price, symbol, executed=True):
 # === Strategy Evaluation ===
 def evaluate_with_voter(df, symbol):
     try:
-        final_signal = voter.get_final_signal(df)
+        final_signal = voter[symbol].get_final_signal(df)
         if final_signal == "BUY":
             return {
                 "action": "BUY",
@@ -178,8 +179,8 @@ def log_pnl():
 
 # === ML Retrain Scheduler ===
 def activate_lightgbm():
-    train_lightgbm()
-    print("[ML] ✅ LightGBM model retrained")
+    for symbol in SYMBOLS:
+        train_lightgbm(symbol)
 
 # === Entry Point ===
 if __name__ == '__main__':
@@ -192,7 +193,7 @@ if __name__ == '__main__':
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(log_pnl, 'interval', minutes=1)
-    scheduler.add_job(activate_lightgbm, 'cron', hour=0, minute=0)
+    scheduler.add_job(activate_lightgbm, 'interval', hours=2)
     scheduler.start()
 
     print("[Bot] ✅ Multi-symbol scalping bot active")
