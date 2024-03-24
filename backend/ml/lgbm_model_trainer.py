@@ -1,8 +1,8 @@
 import os
 import joblib
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import r2_score, mean_squared_error
 import lightgbm as lgb
 from sqlalchemy import create_engine
 
@@ -14,7 +14,7 @@ def train_lightgbm():
     print("[ML Trainer] 📊 Starting LightGBM training...")
 
     # 1. Load market data
-    df = pd.read_sql("SELECT * FROM market_data ORDER BY timestamp DESC LIMIT 1000", engine)
+    df = pd.read_sql("SELECT * FROM market_data ORDER BY timestamp DESC ", engine)
     df = df.sort_values('timestamp')
 
     if df.empty or len(df) < 100:
@@ -36,27 +36,36 @@ def train_lightgbm():
     # 3. Create labels (next close - current close as return %)
     df['target'] = df['close'].pct_change().shift(-1) * 100
     df.dropna(inplace=True)
-    
-# 2. Initialize LabelEncoder
-    le = LabelEncoder()
 
-    # 3. Fit and transform the 'symbol' column
+    # 4. Encode symbol
+    le = LabelEncoder()
     df['symbol_encoded'] = le.fit_transform(df['symbol'])
 
-    # 4. Select features and labels
-    features = ['rsi', 'ema_fast', 'ema_slow', 'macd', 'macd_signal', 'volume','symbol_encoded']
+    # 5. Select features and labels
+    features = ['rsi', 'ema_fast','open','close','high','low','volume' ,'ema_slow', 'macd', 'macd_signal', 'volume', 'symbol_encoded']
     X = df[features]
     y = df['target']
 
-    # 5. Normalize features
+    # 6. Normalize features
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # 6. Train model
-    model = lgb.LGBMRegressor()
-    model.fit(X_scaled, y)
+    # 7. Split into train/test sets (80/20)
+    split_idx = int(len(X_scaled) * 0.8)
+    X_train, X_test = X_scaled[:split_idx], X_scaled[split_idx:]
+    y_train, y_test = y[:split_idx], y[split_idx:]
 
-    # 7. Save model and scaler
+    # 8. Train model
+    model = lgb.LGBMRegressor()
+    model.fit(X_train, y_train)
+
+    # 9. Evaluate model
+    y_pred = model.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"[ML Trainer] 📈 Evaluation Results — R² Score: {r2:.4f}, MSE: {mse:.4f}")
+
+    # 10. Save model and scaler
     os.makedirs("models", exist_ok=True)
     joblib.dump(model, "models/lightgbm_model.pkl")
     joblib.dump(scaler, "models/scaler.pkl")

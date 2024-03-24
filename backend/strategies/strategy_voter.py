@@ -1,4 +1,6 @@
 # backend/strategy/strategy_voter.py
+import os,sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.strategies.rsi_strategy import RSIStrategy
 from backend.strategies.macd_strategy import MACDStrategy
@@ -15,6 +17,7 @@ class StrategyVoter:
             BollingerBandsStrategy(),
             MLStrategy()
         ]
+
 
     def get_final_signal(self, df) -> str:
         votes = {"BUY": 0, "SELL": 0, "HOLD": 0}

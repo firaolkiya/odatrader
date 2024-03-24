@@ -1,6 +1,9 @@
 # backend/strategies/macd_strategy.py
 
 import pandas as pd
+import os,sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from .base_strategy import BaseStrategy
 
 class MACDStrategy(BaseStrategy):
