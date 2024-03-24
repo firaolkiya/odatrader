@@ -1,25 +1,19 @@
 import os, sys, time
 from datetime import datetime, timezone
 import pandas as pd
-import ta
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine, text
 from binance import ThreadedWebsocketManager
-import ta.momentum
-import ta.trend
-import ta.volatility
 
 # === Path Fixes ===
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # === Local Imports ===
-from strategies.rsi_strategy import evaluate_rsi
-from strategies.ema_crossover import evaluate_ema_crossover
-from strategies.macd_strategy import evaluate_macd
-from strategies.bb_strategy import evaluate_bollinger
-from backend.ml.ml_strategy import evaluate_ml_strategy
+from backend.core.feature_engineering import compute_features as engineer_features
+from backend.ml.ml_strategy import MLStrategy
 from backend.ml.lgbm_model_trainer import train_lightgbm
 from backend.execution.execution_engine import ExecutionEngine
+from backend.strategies.strategy_voter import StrategyVoter
 
 # === CONFIG ===
 DB_PARAMS = {
@@ -32,19 +26,19 @@ DB_PARAMS = {
 SYMBOLS = ["btcusdt", "ethusdt", "bnbusdt", "solusdt", "xrpusdt"]
 INTERVAL = "1m"
 STARTING_BALANCE = 50000
-lstm_active = False
 
 # === DB Setup ===
 DB_URI = f"postgresql+psycopg2://{DB_PARAMS['user']}:{DB_PARAMS['password']}@{DB_PARAMS['host']}:{DB_PARAMS['port']}/{DB_PARAMS['dbname']}"
 engine = create_engine(DB_URI)
 
-# === Execution Engine ===
+# === Engine + Voter ===
 execution_engine = ExecutionEngine(starting_balance=STARTING_BALANCE, engine=engine)
+voter = StrategyVoter()
 
-# === Store OHLCV ===
+# === Store OHLCV to DB ===
 def store_to_db(symbol, candle):
     with engine.begin() as conn:
-        conn.execute(text(f'''
+        conn.execute(text('''
             CREATE TABLE IF NOT EXISTS market_data (
                 symbol TEXT NOT NULL,
                 timestamp TIMESTAMPTZ NOT NULL,
@@ -52,7 +46,7 @@ def store_to_db(symbol, candle):
                 PRIMARY KEY (symbol, timestamp)
             )
         '''))
-        conn.execute(text(f'''
+        conn.execute(text('''
             INSERT INTO market_data (symbol, timestamp, open, high, low, close, volume)
             VALUES (:symbol, :timestamp, :open, :high, :low, :close, :volume)
             ON CONFLICT (symbol, timestamp) DO NOTHING
@@ -66,33 +60,31 @@ def store_to_db(symbol, candle):
             'volume': float(candle['v'])
         })
 
-# === Load Features ===
-def load_features(symbol):
-    query = '''
-        SELECT * FROM market_data
-        WHERE symbol = %s
-        ORDER BY timestamp DESC
-        LIMIT 100
-    '''
-    df = pd.read_sql(query, engine, params=(symbol,))
-    if df.empty:
+# === Load & Engineer Features ===
+def load_and_engineer_features(symbol: str) -> pd.DataFrame:
+    try:
+        query = '''
+            SELECT * FROM market_data
+            WHERE symbol = %s
+            ORDER BY timestamp DESC
+            LIMIT 100
+        '''
+        df = pd.read_sql(query, engine, params=(symbol,))
+        if df.empty or len(df) < 30:
+            print(f"[{symbol.upper()}] ⚠️ Not enough data")
+            return pd.DataFrame()
+
+        df.sort_values('timestamp', inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+        df = engineer_features(df)  # ✅ Correct function call
+        df.dropna(inplace=True)
         return df
+    except Exception as e:
+        print(f"[{symbol.upper()}] ❌ Feature engineering error: {e}")
+        return pd.DataFrame()
 
-    df.sort_values('timestamp', inplace=True)
-    df["rsi"] = ta.momentum.RSIIndicator(close=df["close"], window=14).rsi()
-    df["ema_fast"] = ta.trend.EMAIndicator(close=df['close'], window=9).ema_indicator()
-    df['ema_slow'] = ta.trend.EMAIndicator(close=df['close'], window=21).ema_indicator()
-
-    macd = ta.trend.MACD(close=df['close'], window_fast=22, window_slow=26, window_sign=9)
-    df['macd'] = macd.macd()
-    df['macd_signal'] = macd.macd_signal()
-
-    bb = ta.volatility.BollingerBands(close=df['close'], window=20)
-    df['bb_upper'] = bb.bollinger_hband()
-    df['bb_lower'] = bb.bollinger_lband()
-    return df
-
-# === Log Executed Signal Only ===
+# === Log Signal to DB ===
 def log_signal_to_db(signal, price, symbol, executed=True):
     try:
         with engine.begin() as conn:
@@ -123,49 +115,27 @@ def log_signal_to_db(signal, price, symbol, executed=True):
     except Exception as e:
         print(f"[DB Error] ❌ Failed to log signal for {symbol}: {e}")
 
-# === Strategy Voting ===
-def evaluate_all_strategies(row, full_df):
-    strategy_functions = [
-        ("RSI", lambda r, df: evaluate_rsi(r, df)),
-        ("EMA Crossover", lambda r, df: evaluate_ema_crossover(r)),
-        ("MACD", lambda r, df: evaluate_macd(r)),
-        ("Bollinger Bands", lambda r, df: evaluate_bollinger(r)),
-        ("ML Strategy", lambda r, df: evaluate_ml_strategy())
-    ]
-
-    votes = {"BUY": 0, "SELL": 0}
-    signals = []
-
-    for name, func in strategy_functions:
-        try:
-            signal = func(row, full_df)
-            print(f"[{name}] Signal: {signal}")
-            if signal and signal["action"].upper() in votes:
-                action = signal["action"].upper()
-                votes[action] += 1
-                signals.append({
-                    "strategy": name,
-                    "action": action,
-                    "reason": signal.get("reason", "")
-                })
-        except Exception as e:
-            print(f"[{name} ERROR] {e}")
-
-    if votes["BUY"] >= 2:
-        return {
-            "action": "BUY",
-            "strategy": "cumulative_vote",
-            "reason": str([s['strategy'] for s in signals if s['action'] == 'BUY'])
-        }
-    elif votes["SELL"] >= 2:
-        return {
-            "action": "SELL",
-            "strategy": "cumulative_vote",
-            "reason": str([s['strategy'] for s in signals if s['action'] == 'SELL'])
-        }
+# === Strategy Evaluation ===
+def evaluate_with_voter(df, symbol):
+    try:
+        final_signal = voter.get_final_signal(df)
+        if final_signal == "BUY":
+            return {
+                "action": "BUY",
+                "strategy": "strategy_voter",
+                "reason": "Consensus voted BUY"
+            }
+        elif final_signal == "SELL":
+            return {
+                "action": "SELL",
+                "strategy": "strategy_voter",
+                "reason": "Consensus voted SELL"
+            }
+    except Exception as e:
+        print(f"[{symbol.upper()} Evaluation Error] {e}")
     return None
 
-# === Handle WebSocket Messages ===
+# === WebSocket Message Handler ===
 def handle_socket_message(symbol):
     def inner(msg):
         try:
@@ -181,21 +151,23 @@ def handle_socket_message(symbol):
                 'c': float(kline['c']),
                 'v': float(kline['v']),
             }
+
             store_to_db(symbol, candle)
-            df = load_features(symbol)
-            if df.empty or len(df) < 30:
+            df = load_and_engineer_features(symbol)
+            if df.empty:
                 return
-            row = df.iloc[-1]
-            signal = evaluate_all_strategies(row, df)
+
+            signal = evaluate_with_voter(df, symbol)
             if signal:
-                executed = execution_engine.execute_paper_trade(signal, row['close'], symbol)
+                price = df.iloc[-1]['close']
+                executed = execution_engine.execute_paper_trade(signal, price, symbol)
                 if executed:
-                    log_signal_to_db(signal, row['close'], symbol)
+                    log_signal_to_db(signal, price, symbol)
         except Exception as e:
-            print(f"[{symbol.upper()} WebSocket Error] {e}")
+            print(f"[{symbol.upper()} Stream Error] {e}")
     return inner
 
-# === Log PnL Summary ===
+# === PnL Logger ===
 def log_pnl():
     pnl_log = execution_engine.get_pnl_log()
     if pnl_log:
@@ -204,14 +176,12 @@ def log_pnl():
             print(f"Symbol: {trade['symbol']} | Entry: {trade['entry_time']} | Exit: {trade['exit_time']} | PnL: {trade['pnl']:.2f}")
         print(f"[Balance] ${execution_engine.get_balance():.2f}\n")
 
-# === Retrain ML ===
+# === ML Retrain Scheduler ===
 def activate_lightgbm():
-    global lstm_active
     train_lightgbm()
-    lstm_active = True
     print("[ML] ✅ LightGBM model retrained")
 
-# === Main Bot Runner ===
+# === Entry Point ===
 if __name__ == '__main__':
     twm = ThreadedWebsocketManager()
     twm.start()
