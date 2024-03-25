@@ -18,14 +18,14 @@ class RSIStrategy(BaseStrategy):
                 return None
 
             # Main RSI signals
-            if rsi < 30:
+            if rsi < 45:
                 return {
                     'action': 'BUY',
                     'reason': 'RSI below 30 (strong oversold)',
                     'strategy': self.name,
                     'symbol': symbol
                 }
-            elif rsi > 70:
+            elif rsi > 60:
                 return {
                     'action': 'SELL',
                     'reason': 'RSI above 70 (strong overbought)',

@@ -66,7 +66,7 @@ def load_and_engineer_features(symbol: str) -> pd.DataFrame:
         '''
         df = pd.read_sql(query, engine, params=(symbol,))
         if df.empty or len(df) < 30:
-            print(f"[{symbol.upper()}] ⚠️ Not enough data")
+            print(f"[{symbol.upper()}] ⚠️ Not enough data")                                     
             return pd.DataFrame()
 
         df.sort_values('timestamp', inplace=True)
@@ -111,6 +111,8 @@ def log_signal_to_db(signal, price, symbol, executed=True):
 
 # === Strategy Evaluation ===
 def evaluate_with_voter(df, symbol):
+    message = f"evaluating stratagies for **{symbol}**"
+    print(message.upper())
     try:
         final_signal = voter[symbol].get_final_signal(df)
         if final_signal == "BUY":

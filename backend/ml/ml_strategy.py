@@ -1,4 +1,4 @@
-import os
+import os, sys
 import joblib
 import pandas as pd
 import numpy as np
@@ -7,6 +7,8 @@ from lightgbm import LGBMRegressor
 from sklearn.preprocessing import StandardScaler
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator, MACD
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from config.config import DATABASE_URL
   # using ta instead of talib
 
 
@@ -65,29 +67,43 @@ class MLStrategy:
 
         df.bfill(inplace=True)  # Replaces deprecated fillna(method='bfill')
         return df
+    # Ascending for feature calc
 
-    def evaluate(self, market_data: Union[pd.DataFrame, pd.Series]) -> Dict[str, str]:
+
+    def evaluate(self, symbol: str) -> Dict[str, str]:
         """
-        Evaluate market data and return trading decision
+        Evaluate trading signal based on the symbol's latest market data fetched from the database.
 
         Args:
-            market_data: Latest market data (DataFrame or Series)
-                         Must contain: ['open', 'high', 'low', 'close', 'volume']
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
 
         Returns:
-            Dictionary with trading decision:
+            A dictionary with trading decision:
             {
                 "action": "buy|sell|hold",
                 "strategy": "MLStrategy",
                 "reason": str
             }
         """
+        def get_market_data_from_db(symbol: str) -> pd.DataFrame:
+            from sqlalchemy import create_engine
+            import pandas as pd
+
+            engine = create_engine(f"{DATABASE_URL}")
+            query = f"SELECT * FROM market_data WHERE symbol = '{symbol}' ORDER BY timestamp DESC LIMIT 100"
+            df = pd.read_sql(query, engine)
+
+            return df.sort_values("timestamp")  
         try:
-            # Convert input to DataFrame format
-            if isinstance(market_data, pd.Series):
-                df = market_data.to_frame().T
-            else:
-                df = market_data.copy()
+            # Fetch market data from your database
+            df = get_market_data_from_db(symbol)
+
+            if df is None or df.empty:
+                return {
+                    "action": "hold",
+                    "strategy": self.name,
+                    "reason": "No market data available"
+                }
 
             df = self._generate_features(df)
 
@@ -103,7 +119,15 @@ class MLStrategy:
             input_scaled = self.scaler.transform(input_df)
             predicted_change = self.model.predict(input_scaled)[0]
 
-            threshold = 0.002  # 0.2% change threshold
+            threshold = 0.001  # 0.2% change threshold
+
+            # Convert predicted_change to float if it's a numpy array or sparse matrix
+            if hasattr(predicted_change, "toarray"):
+                predicted_change = predicted_change.toarray().item()
+            elif hasattr(predicted_change, "item"):
+                predicted_change = predicted_change.item()
+            else:
+                predicted_change = float(predicted_change)
 
             if predicted_change > threshold:
                 return {
@@ -117,6 +141,7 @@ class MLStrategy:
                     "strategy": self.name,
                     "reason": f"Predicted {predicted_change:.2%} loss"
                 }
+
             else:
                 return {
                     "action": "hold",
@@ -130,3 +155,7 @@ class MLStrategy:
                 "strategy": self.name,
                 "reason": f"Error: {str(e)}"
             }
+if __name__ == "__main__":
+    strategy = MLStrategy()
+    result = strategy.evaluate("btcusdt")
+    print(result)
