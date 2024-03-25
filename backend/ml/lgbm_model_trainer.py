@@ -1,4 +1,4 @@
-import os
+import os, sys
 import joblib
 import pandas as pd
 import numpy as np
@@ -8,11 +8,14 @@ import lightgbm as lgb
 from sqlalchemy import create_engine
 import talib
 import matplotlib.pyplot as plt
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from config.config import DATABASE_URL, SYMBOLS
 
 # === CONFIG ===
-DB_URI = "postgresql+psycopg2://odatrade:odatrade@localhost:5432/postgres"
+DB_URI = f"{DATABASE_URL}"
 engine = create_engine(DB_URI)
-SYMBOLS = ["btcusdt", "ethusdt", "bnbusdt", "solusdt", "xrpusdt"]
+SYMBOLS = SYMBOLS
 
 def train_lightgbm(symbol: str):
     symbol = symbol.lower()

@@ -5,7 +5,6 @@ import os, sys
 # Path fix
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-# === Local Imports ===
 from backend.risk.risk_manager import check_risk_limits, register_trade
 
 def safe_float(x):
@@ -14,15 +13,14 @@ def safe_float(x):
     except:
         return None
 
-
 class ExecutionEngine:
-    FEE_RATE = 0.00075          # Binance fee
-    POSITION_RISK = 0.10        # 10% capital per trade
+    FEE_RATE = 0.00075
+    POSITION_RISK = 0.10
 
     def __init__(self, starting_balance=50000, engine=None):
         self.balance = starting_balance
-        self.positions = {}     # symbol: {'price': float, 'time': datetime}
-        self.pnl_log = []       # closed trade records
+        self.positions = {}
+        self.pnl_log = []
         self.engine = engine
         self._create_trades_table()
 
@@ -50,7 +48,17 @@ class ExecutionEngine:
                 )
             '''))
 
+    def check_kill_switch(self):
+        kill_switch_path = os.path.join("backend", "risk", "kill_switch.flag")
+        if os.path.exists(kill_switch_path):
+            print("🛑 Kill switch activated! No trades allowed.")
+            return True
+        return False
+
     def execute_paper_trade(self, signal, price, symbol):
+        if self.check_kill_switch():
+            return False
+
         symbol = symbol.upper()
         timestamp = datetime.now(timezone.utc)
         strategy = signal['strategy']
@@ -62,7 +70,6 @@ class ExecutionEngine:
             'entry_time': position['time']
         } if position else None
 
-        # === RISK FILTER ===
         signal["symbol"] = symbol
         risk_ok, reason = check_risk_limits(signal, price, current_position, self.balance)
         if not risk_ok:
@@ -71,11 +78,7 @@ class ExecutionEngine:
 
         if action == "BUY":
             if not position:
-                # Open new position
-                self.positions[symbol] = {
-                    'price': price,
-                    'time': timestamp
-                }
+                self.positions[symbol] = {'price': price, 'time': timestamp}
                 self._log_trade(timestamp, "BUY", price, strategy, reason, symbol)
                 print(f"[BUY] {symbol} at ${price:.2f} | Strategy: {strategy}")
                 return True
@@ -85,7 +88,6 @@ class ExecutionEngine:
 
         elif action == "SELL":
             if position:
-                # Close position
                 entry_price = position['price']
                 entry_time = position['time']
                 usd_alloc = self.balance * self.POSITION_RISK

@@ -14,16 +14,11 @@ from backend.ml.ml_strategy import MLStrategy
 from backend.ml.lgbm_model_trainer import train_lightgbm
 from backend.execution.execution_engine import ExecutionEngine
 from backend.strategies.strategy_voter import StrategyVoter
+from config.config import DB_PARAMS, SYMBOLS
 
 # === CONFIG ===
-DB_PARAMS = {
-    'dbname': 'postgres',
-    'user': 'odatrade',
-    'password': 'odatrade',
-    'host': 'localhost',
-    'port': '5432'
-}
-SYMBOLS = ["btcusdt", "ethusdt", "bnbusdt", "solusdt", "xrpusdt"]
+DB_PARAMS = DB_PARAMS
+SYMBOLS = SYMBOLS
 INTERVAL = "1m"
 STARTING_BALANCE = 50000
 
@@ -34,7 +29,6 @@ engine = create_engine(DB_URI)
 # === Engine + Voter ===
 execution_engine = ExecutionEngine(starting_balance=STARTING_BALANCE, engine=engine)
 voter = {symbol: StrategyVoter(symbol) for symbol in SYMBOLS}
-
 
 # === Store OHLCV to DB ===
 def store_to_db(symbol, candle):
@@ -77,8 +71,7 @@ def load_and_engineer_features(symbol: str) -> pd.DataFrame:
 
         df.sort_values('timestamp', inplace=True)
         df.reset_index(drop=True, inplace=True)
-
-        df = engineer_features(df)  # ✅ Correct function call
+        df = engineer_features(df)
         df.dropna(inplace=True)
         return df
     except Exception as e:
@@ -161,6 +154,13 @@ def handle_socket_message(symbol):
             signal = evaluate_with_voter(df, symbol)
             if signal:
                 price = df.iloc[-1]['close']
+
+                # 🛡 Kill Switch Check
+                if execution_engine.check_kill_switch():
+                    print(f"[{symbol.upper()}] 🛑 Kill switch active. Trade blocked.")
+                    log_signal_to_db(signal, price, symbol, executed=False)
+                    return
+
                 executed = execution_engine.execute_paper_trade(signal, price, symbol)
                 if executed:
                     log_signal_to_db(signal, price, symbol)
@@ -195,6 +195,11 @@ if __name__ == '__main__':
     scheduler.add_job(log_pnl, 'interval', minutes=1)
     scheduler.add_job(activate_lightgbm, 'interval', hours=2)
     scheduler.start()
+
+    if execution_engine.check_kill_switch():
+        print("[Startup] ⚠️ Kill switch is ACTIVE.")
+    else:
+        print("[Startup] Kill switch is OFF.")
 
     print("[Bot] ✅ Multi-symbol scalping bot active")
     while True:

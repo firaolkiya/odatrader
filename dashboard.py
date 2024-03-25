@@ -7,12 +7,13 @@ from datetime import datetime
 import pytz
 from streamlit_autorefresh import st_autorefresh
 
+from config.config import DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DATABASE_URL
 # === CONFIG ===
-DB_USER = 'odatrade'
-DB_PASS = 'odatrade'
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'postgres'
+DB_USER = DB_USER
+DB_PASS = DB_PASSWORD
+DB_HOST = DB_HOST
+DB_PORT = DB_PORT
+DB_NAME = DB_NAME
 STARTING_BALANCE = 50000
 SYMBOL_LIST = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 
@@ -29,7 +30,7 @@ strategy_filter = st.sidebar.selectbox("Strategy", ["All", "RSI", "EMA Crossover
 view_all = st.sidebar.checkbox("📊 View total portfolio", value=True)
 
 # === DATABASE ===
-DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = f"{DATABASE_URL}"
 engine = create_engine(DATABASE_URL)
 utc = pytz.UTC
 
@@ -138,14 +139,7 @@ def plot_candlestick(df, signals):
             textposition="bottom center"
         ))
 
-    zoom_size = {
-        "1m": 100,
-        "5m": 100,
-        "15m": 96,
-        "1h": 72,
-        "4h": 60,
-        "1d": 30,
-    }.get(interval, 10)
+    zoom_size = {"1m": 100,"5m": 100,"15m": 96,"1h": 72,"4h": 60,"1d": 30,}.get(interval, 10)
 
     if len(df) > zoom_size:
         x_range = [df['timestamp'].iloc[-zoom_size], df['timestamp'].iloc[-1]]

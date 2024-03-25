@@ -9,20 +9,15 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 from binance.client import Client
 from sqlalchemy import create_engine, text
-
+import os ,sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from config.config import BINANCE_API_KEY, BINANCE_SECRET_KEY , DATABASE_URL, DB_PARAMS
 # === CONFIG ===
-DB_PARAMS = {
-    'dbname': 'postgres',
-    'user': 'odatrade',
-    'password': 'odatrade',
-    'host': 'localhost',
-    'port': '5432'
-}
-DB_URI = f"postgresql+psycopg2://{DB_PARAMS['user']}:{DB_PARAMS['password']}@{DB_PARAMS['host']}:{DB_PARAMS['port']}/{DB_PARAMS['dbname']}"
-engine = create_engine(DB_URI)
+DB_PARAMS = DB_PARAMS
+DB_URI = f"{DATABASE_URL}"
 
-BINANCE_API_KEY = ''  # Optional for public data
-BINANCE_SECRET = ''
+BINANCE_API_KEY = f"{BINANCE_API_KEY}"  # Optional for public data
+BINANCE_SECRET = f"{BINANCE_SECRET_KEY}"
 
 SYMBOL = 'BTCUSDT'
 INTERVAL = Client.KLINE_INTERVAL_1MINUTE

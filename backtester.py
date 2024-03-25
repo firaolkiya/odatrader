@@ -15,27 +15,21 @@ import sys
 from sqlalchemy import create_engine, text
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from strategies.rsi_strategy import evaluate_rsi
-from strategies.ema_crossover import evaluate_ema_crossover
-from strategies.macd_strategy import evaluate_macd
-from strategies.bb_strategy import evaluate_bollinger
-
+from backend.strategies.rsi_strategy import RSIStrategy
+from backend.strategies.ema_crossover import EMACrossoverStrategy
+from backend.strategies.macd_strategy import MACDStrategy
+from backend.strategies.bb_strategy import BollingerStrategy
+from config.config import DATABASE_URL, DB_PARAMS
 # === DB CONFIG ===
-DB_PARAMS = {
-    'dbname': 'postgres',
-    'user': 'odatrade',
-    'password': 'odatrade',
-    'host': 'localhost',
-    'port': '5432'
-}
-DB_URI = f"postgresql+psycopg2://{DB_PARAMS['user']}:{DB_PARAMS['password']}@{DB_PARAMS['host']}:{DB_PARAMS['port']}/{DB_PARAMS['dbname']}"
+DB_PARAMS = DB_PARAMS
+DB_URI = f"{DATABASE_URL}"
 engine = create_engine(DB_URI)
 
 STRATEGIES = {
-    'rsi': evaluate_rsi,
-    'ema': evaluate_ema_crossover,
-    'macd': evaluate_macd,
-    'bb': evaluate_bollinger
+    'rsi': RSIStrategy,
+    'ema': EMACrossoverStrategy,
+    'macd': MACDStrategy,
+    'bb': BollingerStrategy
 }
 
 USE_STRATEGY = 'rsi'  # options: 'rsi', 'ema', 'macd', 'bb', 'all'
@@ -51,17 +45,30 @@ def load_data():
 
 # === Feature Engineering ===
 def add_indicators(df):
-    import talib
-    df['rsi'] = talib.RSI(df['close'], timeperiod=14)
-    df['ema_fast'] = talib.EMA(df['close'], timeperiod=9)
-    df['ema_slow'] = talib.EMA(df['close'], timeperiod=21)
-    macd, macdsignal, _ = talib.MACD(df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
-    df['macd'] = macd
-    df['macd_signal'] = macdsignal
-    upper, middle, lower = talib.BBANDS(df['close'], timeperiod=20)
-    df['bb_upper'] = upper
-    df['bb_lower'] = lower
+    import ta
+
+    # Ensure correct column format
+    df['close'] = df['close'].astype(float)
+
+    # RSI
+    df['rsi'] = ta.momentum.RSIIndicator(close=df['close'], window=14).rsi()
+
+    # EMA Fast and Slow
+    df['ema_fast'] = ta.trend.EMAIndicator(close=df['close'], window=9).ema_indicator()
+    df['ema_slow'] = ta.trend.EMAIndicator(close=df['close'], window=21).ema_indicator()
+
+    # MACD
+    macd = ta.trend.MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
+    df['macd'] = macd.macd()
+    df['macd_signal'] = macd.macd_signal()
+
+    # Bollinger Bands
+    bb = ta.volatility.BollingerBands(close=df['close'], window=20)
+    df['bb_upper'] = bb.bollinger_hband()
+    df['bb_lower'] = bb.bollinger_lband()
+
     return df.dropna()
+
 
 # === Backtest Logic ===
 def run_backtest(df):
