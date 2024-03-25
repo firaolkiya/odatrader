@@ -86,6 +86,7 @@ def train_lightgbm(symbol: str):
     # plt.legend()
     # plt.savefig(f'backend/ml/models/{symbol}_prediction_plot.png')
     # plt.close()
+    
 
 if __name__ == "__main__":
     for symbol in SYMBOLS:
