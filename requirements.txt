@@ -10,7 +10,10 @@ plotly
 streamlit
 lightgbm
 streamlit-autorefresh
-
+dotenv
+nltk
+httpx
+typing
 # Binance API
 python-binance
 ta
@@ -26,6 +29,12 @@ websockets
 
 # Timezone support
 pytz
+
+# Logging & JSON utilities
+python-json-logger
+
+# File and OS utilities
+pathlib
 
 # Optional (only if you're using TensorFlow for LSTM in another phase)
 # tensorflow

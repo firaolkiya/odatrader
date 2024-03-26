@@ -11,13 +11,13 @@ BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
 
 # === RISK & SAFETY SETTINGS ===
 MAX_TRADES_PER_DAY = int(os.getenv("MAX_TRADES_PER_DAY", 30))
-MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 15))
-TRAIL_STOP_PCT = float(os.getenv("TRAIL_STOP_PCT", 0.02))
-STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", 0.05))
-TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.04))
-FIXED_RISK_PCT = float(os.getenv("FIXED_RISK_PCT", 0.01))
+MAX_DRAWDOWN = float(os.getenv("MAX_DRAWDOWN", 0.15))
+TRAIL_STOP_PCT = float(os.getenv("TRAIL_STOP_PCT", 0.002))
+STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", 0.035))
+TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
+FIXED_RISK_PCT = float(os.getenv("FIXED_RISK_PCT", 0.05))
 DAILY_LOSS_LIMIT = float(os.getenv("DAILY_LOSS_LIMIT", 30))
-TRAILING_STOP_PCT = float(os.getenv("STOP_LOSS_PCT", 0.02))
+TRAILING_STOP_PCT = float(os.getenv("STOP_LOSS_PCT", 0.002))
 TRAILING_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.04))
 MIN_PROFIT_PCT = 0.0040          # 0.40% profit threshold
 MIN_PROFIT_RETRACE_PCT = 0.0010  # 0.10% allowed retracement
