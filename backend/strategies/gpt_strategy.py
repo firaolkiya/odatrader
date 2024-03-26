@@ -24,9 +24,9 @@ class GPTStrategy:
                    close: float, rsi: float, ema_fast: float, ema_slow: float,
                    macd: float, volume: float, timestamp: str) -> str:
         return f"""
-    CRYPTOCURRENCY TRADING DECISION SYSTEM (v2.1 Balanced)
+    CRYPTOCURRENCY TRADING DECISION SYSTEM (v2.2 Active)
 
-    You are an impartial AI trading analyst evaluating {symbol} at {timestamp}.
+    You are an AI trading analyst evaluating {symbol} at {timestamp}.
 
     === MARKET DATA ===
     [Price Action]
@@ -39,65 +39,56 @@ class GPTStrategy:
     - EMA Cross: {ema_fast:.2f} > {ema_slow:.2f} → {'🟢 Bullish' if ema_fast > ema_slow else '🔴 Bearish'}
     - MACD: {macd:.2f} → {self._macd_strength(macd)}
 
-    === BALANCED TRADING RULES ===
-    🔴 STRONG SELL WHEN (REQUIRE 2/3):
-    1) RSI > 65 {'✅' if rsi > 65 else '❌'}
+    === ACTIVE TRADING RULES ===
+    🔴 SELL WHEN (REQUIRE 1/3):
+    1) RSI > 60 {'✅' if rsi > 60 else '❌'}
     2) EMA Bearish {'✅' if ema_fast < ema_slow else '❌'} 
-    3) MACD < -0.3 {'✅' if macd < -0.3 else '❌'}
+    3) MACD < -0.2 {'✅' if macd < -0.2 else '❌'}
 
-    🟢 STRONG BUY WHEN (REQUIRE 2/3):
-    1) RSI < 35 {'✅' if rsi < 35 else '❌'}
+    🟢 BUY WHEN (REQUIRE 1/3):
+    1) RSI < 40 {'✅' if rsi < 40 else '❌'}
     2) EMA Bullish {'✅' if ema_fast > ema_slow else '❌'}
-    3) MACD > 0.3 {'✅' if macd > 0.3 else '❌'}
+    3) MACD > 0.2 {'✅' if macd > 0.2 else '❌'}
 
-    ⚪ HOLD WHEN:
-    - Mixed signals (1 buy + 1 sell condition)
-    - RSI between 40-60
-    - MACD between -0.2 and 0.2
-    - No clear trend confirmation
+    ⚪ HOLD ONLY WHEN:
+    - All indicators are completely neutral
+    - No clear trend in price action
 
-    === CONFIRMATION FACTORS ===
-    Volume Confirmation:
-    - Bullish: Rising volume on up moves {'✅' if volume > 10000 and close > open else '❌'}
-    - Bearish: Rising volume on down moves {'✅' if volume > 10000 and close < open else '❌'}
+    === WEIGHTED DECISION FACTORS ===
+    Volume Impact (30% weight):
+    - High volume strengthens current trend {'✅' if volume > 10000 else '❌'}
 
-    Price Patterns:
-    - Higher highs/lows → Strengthens BUY
-    - Lower highs/lows → Strengthens SELL
+    Price Momentum (40% weight):
+    - Recent price direction: {'🟢 Up' if close > open else '🔴 Down'}
 
-    === RISK MANAGEMENT ===
-    ⚠️ NEVER BUY WHEN:
-    - RSI > 60 + Bearish EMA cross
-    - Volume declining during upticks
-
-    ⚠️ NEVER SELL WHEN:
-    - RSI < 40 + Bullish EMA cross
-    - MACD histogram rising
+    Indicator Alignment (30% weight):
+    - Bullish indicators: {sum([1 if rsi < 40 else 0, 1 if ema_fast > ema_slow else 0, 1 if macd > 0.2 else 0])}/3
+    - Bearish indicators: {sum([1 if rsi > 60 else 0, 1 if ema_fast < ema_slow else 0, 1 if macd < -0.2 else 0])}/3
 
     === FINAL DECISION TREE ===
-    1) Check if SELL conditions met (2/3)
-    2) If not, check if BUY conditions met (2/3) 
-    3) Default to HOLD for uncertainty
+    1) Prefer BUY/SELL when any 1 indicator suggests it
+    2) Consider volume and price momentum as tie-breakers
+    3) Only HOLD when absolutely no signals present
 
     OUTPUT ONLY ONE WORD:
-    - "SELL" if 🔴 conditions met
-    - "BUY" if 🟢 conditions met  
-    - "HOLD" if ⚪ neutral/mixed
+    - "SELL" if  🔴 conditions met are more than 🟢
+    - "BUY" if  🟢 conditions met  are more than 🔴
+    - "HOLD" only if completely neutral
     """
 
-    # Enhanced helper methods
+    # Modified helper methods
     def _rsi_strength(self, rsi: float) -> str:
-        if rsi > 70: return "🔥 EXTREME OVERBOUGHT (STRONG SELL)"
-        if rsi > 60: return "⚠️ Overbought (Potential Sell)"
-        if rsi < 30: return "🔥 EXTREME OVERSOLD (STRONG BUY)"
-        if rsi < 40: return "⚠️ Oversold (Potential Buy)"
-        return "⚖️ Neutral (Hold)"
+        if rsi > 65: return "🔴 SELL SIGNAL"
+        if rsi > 55: return "⚠️ Mild Overbought"
+        if rsi < 35: return "🟢 BUY SIGNAL"
+        if rsi < 45: return "⚠️ Mild Oversold"
+        return "⚖️ Neutral"
 
     def _macd_strength(self, macd: float) -> str:
-        if macd > 0.5: return "🚀 STRONG BULLISH"
-        if macd > 0.2: return "🟢 Bullish"
-        if macd < -0.5: return "💣 STRONG BEARISH"
-        if macd < -0.2: return "🔴 Bearish"
+        if macd > 0.3: return "🟢 BUY SIGNAL"
+        if macd > 0.1: return "🟢 Mild Bullish"
+        if macd < -0.3: return "🔴 SELL SIGNAL"
+        if macd < -0.1: return "🔴 Mild Bearish"
         return "⚖️ Neutral"
     def evaluate(self, price_override=None, sentiment_override=None, timestamp_override=None):
         try:

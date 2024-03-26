@@ -20,21 +20,18 @@ class StrategyVoter:
         self.symbol = symbol.lower()
         self.strategies = self._initialize_strategies()
         self.weights = {
-            "RSIStrategy": 0.075,
-            "MACDStrategy": 0.075,
-            "EMACrossoverStrategy": 0.075,
-            "BollingerStrategy": 0.075,
-            "MLStrategy": 0.30,
-            "GPTStrategy": 0.40
+            "CombinedTechnicalStrategy": 0.3,  # Combined weight of all technical strategies
+            "MLStrategy": 0.35,
+            "GPTStrategy": 0.35
         }
         self.decision_threshold = 0.6  # 60% confidence required
 
     def _initialize_strategies(self) -> List:
         return [
-            RSIStrategy(),
-            MACDStrategy(),
-            EMACrossoverStrategy(),
-            BollingerStrategy(),
+            RSIStrategy(),  # Still kept for internal use
+            MACDStrategy(),  # Still kept for internal use
+            EMACrossoverStrategy(),  # Still kept for internal use
+            BollingerStrategy(),  # Still kept for internal use
             MLStrategy(symbol=self.symbol),
             GPTStrategy(symbol=self.symbol)
         ]
@@ -48,9 +45,8 @@ class StrategyVoter:
         current = df.iloc[-1]
         previous = df.iloc[-2]
 
-        # Phase 1: Technical Indicator Validation
-        tech_signals = self._get_technical_signals(current, previous)
-        tech_consensus = self._check_technical_consensus(tech_signals)
+        # Phase 1: Get combined technical signal
+        tech_signal = self._get_combined_technical_signal(current, previous)
         
         # Phase 2: Get ML and GPT signals
         ml_signal = self._get_ml_signal()
@@ -58,8 +54,7 @@ class StrategyVoter:
         
         # Phase 3: Weighted Voting
         final_signal = self._calculate_weighted_vote(
-            tech_signals,
-            tech_consensus,
+            tech_signal,
             ml_signal,
             gpt_signal
         )
@@ -67,36 +62,43 @@ class StrategyVoter:
         print(f"\n[StrategyVoter] Final Signal: {final_signal}")
         return final_signal
 
-    def _get_technical_signals(self, current, previous) -> Dict:
-        """Evaluate all technical indicators"""
-        signals = {}
+    def _get_combined_technical_signal(self, current, previous) -> Dict:
+        """Evaluate and combine all technical indicators into one signal"""
+        signals = []
+        buy_count = 0
+        sell_count = 0
+        
+        # Evaluate each technical strategy
         for strategy in self.strategies[:4]:  # First 4 are technical
             strategy_name = strategy.__class__.__name__
             try:
                 result = strategy.evaluate(current, previous)
                 action = self._parse_strategy_result(result)
-                signals[strategy_name] = {
-                    "action": action,
-                    "weight": self.weights[strategy_name],
-                    "reason": result.get("reason", "No reason") if isinstance(result, dict) else "-"
-                }
-                print(f" - {strategy_name}: {action} ({signals[strategy_name]['weight']} weight)")
+                signals.append(f"{strategy_name}: {action}")
+                
+                if action == "BUY":
+                    buy_count += 1
+                elif action == "SELL":
+                    sell_count += 1
+                    
             except Exception as e:
                 print(f" - {strategy_name}: ERROR → {str(e)}")
-                signals[strategy_name] = {"action": "HOLD", "weight": 0}
-        return signals
-
-    def _check_technical_consensus(self, signals: Dict) -> str:
-        """Check if technical indicators agree"""
-        tech_votes = {"BUY": 0, "SELL": 0, "HOLD": 0}
-        for sig in signals.values():
-            tech_votes[sig["action"]] += 1
+                signals.append(f"{strategy_name}: ERROR")
         
-        if tech_votes["BUY"] >= 3:
-            return "BUY"
-        elif tech_votes["SELL"] >= 3:
-            return "SELL"
-        return "HOLD"
+        # Determine combined action
+        if buy_count > 1 and sell_count:
+            action = "BUY"
+        elif sell_count > 1 and buy_count:
+            action = "SELL"
+        else:
+            action = "HOLD"
+            
+        print(f" - CombinedTechnicalStrategy: {action} ({self.weights['CombinedTechnicalStrategy']} weight)")
+        return {
+            "action": action,
+            "weight": self.weights["CombinedTechnicalStrategy"],
+            "reason": " | ".join(signals)
+        }
 
     def _get_ml_signal(self):
         """Get ML strategy signal"""
@@ -131,15 +133,12 @@ class StrategyVoter:
             print(f" - GPTStrategy: ERROR → {str(e)}")
             return {"action": "HOLD", "weight": 0}
 
-    def _calculate_weighted_vote(self, tech_signals, tech_consensus, ml_signal, gpt_signal) -> str:
+    def _calculate_weighted_vote(self, tech_signal, ml_signal, gpt_signal) -> str:
         """Calculate final weighted decision"""
         weighted_votes = {"BUY": 0.0, "SELL": 0.0, "HOLD": 0.0}
         
-        # 1. Technical indicators vote
-        for sig in tech_signals.values():
-            weighted_votes[sig["action"]] += sig["weight"]
-        
-        # 2. ML and GPT vote
+        # Add votes from each strategy
+        weighted_votes[tech_signal["action"]] += tech_signal["weight"]
         weighted_votes[ml_signal["action"]] += ml_signal["weight"]
         weighted_votes[gpt_signal["action"]] += gpt_signal["weight"]
         
@@ -150,13 +149,7 @@ class StrategyVoter:
         max_score = weighted_votes[max_action]
         
         if max_score >= self.decision_threshold:
-            # Additional confirmation for strong moves
-            if max_action == "BUY":
-                if tech_consensus in ["BUY", "HOLD"]:
-                    return "BUY"
-            elif max_action == "SELL":
-                if tech_consensus in ["SELL", "HOLD"]:
-                    return "SELL"
+            return max_action
         
         # Default to HOLD if no clear consensus
         return "HOLD"

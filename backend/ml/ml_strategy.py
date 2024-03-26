@@ -119,7 +119,7 @@ class MLStrategy:
             input_scaled = self.scaler.transform(input_df)
             predicted_change = self.model.predict(input_scaled)[0]
 
-            threshold = 0.001  # 0.2% change threshold
+            threshold = 0.0001  # 0.2% change threshold
 
             # Convert predicted_change to float if it's a numpy array or sparse matrix
             if hasattr(predicted_change, "toarray"):
