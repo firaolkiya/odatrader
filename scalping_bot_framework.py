@@ -20,7 +20,7 @@ from config.config import DB_PARAMS, SYMBOLS
 DB_PARAMS = DB_PARAMS
 SYMBOLS = SYMBOLS
 INTERVAL = "1m"
-STARTING_BALANCE = 50000
+STARTING_BALANCE = 5000
 
 # === DB Setup ===
 DB_URI = f"postgresql+psycopg2://{DB_PARAMS['user']}:{DB_PARAMS['password']}@{DB_PARAMS['host']}:{DB_PARAMS['port']}/{DB_PARAMS['dbname']}"
@@ -66,7 +66,7 @@ def load_and_engineer_features(symbol: str) -> pd.DataFrame:
         '''
         df = pd.read_sql(query, engine, params=(symbol,))
         if df.empty or len(df) < 30:
-            print(f"[{symbol.upper()}] ⚠️ Not enough data")                                     
+            print(f"[{symbol.upper()}] ⚠️ Not enough data")                                      
             return pd.DataFrame()
 
         df.sort_values('timestamp', inplace=True)

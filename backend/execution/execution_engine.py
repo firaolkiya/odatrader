@@ -6,6 +6,7 @@ import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.risk.risk_manager import check_risk_limits, register_trade
+from config.config import FIXED_RISK_PCT
 
 def safe_float(x):
     try:
@@ -15,9 +16,9 @@ def safe_float(x):
 
 class ExecutionEngine:
     FEE_RATE = 0.00075
-    POSITION_RISK = 0.10
+    POSITION_RISK = FIXED_RISK_PCT
 
-    def __init__(self, starting_balance=50000, engine=None):
+    def __init__(self, starting_balance=5000, engine=None):
         self.balance = starting_balance
         self.positions = {}
         self.pnl_log = []
