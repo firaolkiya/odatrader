@@ -14,7 +14,7 @@ from backend.ml.ml_strategy import MLStrategy
 from backend.ml.lgbm_model_trainer import train_lightgbm
 from backend.execution.execution_engine import ExecutionEngine
 from backend.strategies.strategy_voter import StrategyVoter
-from config.config import DB_PARAMS, SYMBOLS
+from config.config import DB_PARAMS, SYMBOLS, DATABASE_URL
 
 # === CONFIG ===
 DB_PARAMS = DB_PARAMS
@@ -23,7 +23,7 @@ INTERVAL = "1m"
 STARTING_BALANCE = 5000
 
 # === DB Setup ===
-DB_URI = f"postgresql+psycopg2://{DB_PARAMS['user']}:{DB_PARAMS['password']}@{DB_PARAMS['host']}:{DB_PARAMS['port']}/{DB_PARAMS['dbname']}"
+DB_URI = DATABASE_URL
 engine = create_engine(DB_URI)
 
 # === Engine + Voter ===
@@ -184,8 +184,13 @@ def activate_lightgbm():
     for symbol in SYMBOLS:
         train_lightgbm(symbol)
 
-# === Entry Point ===
-if __name__ == '__main__':
+
+bot_running = False  # global state flag
+
+def run_bot():
+    global bot_running
+    bot_running = True
+
     twm = ThreadedWebsocketManager()
     twm.start()
 
@@ -198,11 +203,18 @@ if __name__ == '__main__':
     scheduler.add_job(activate_lightgbm, 'interval', hours=2)
     scheduler.start()
 
-    if execution_engine.check_kill_switch():
-        print("[Startup] ⚠️ Kill switch is ACTIVE.")
-    else:
-        print("[Startup] Kill switch is OFF.")
-
     print("[Bot] ✅ Multi-symbol scalping bot active")
-    while True:
+
+    while bot_running:
         time.sleep(1)
+
+    twm.stop()
+    scheduler.shutdown()
+    print("[Bot] 🛑 Stopped.")
+
+def stop_bot():
+    global bot_running
+    bot_running = False
+
+if __name__ == '__main__':
+    run_bot()

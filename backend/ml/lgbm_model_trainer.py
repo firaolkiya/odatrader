@@ -6,8 +6,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 import lightgbm as lgb
 from sqlalchemy import create_engine
-import talib
-import matplotlib.pyplot as plt
+from ta.momentum import RSIIndicator
+from ta.trend import EMAIndicator, MACD
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from config.config import DATABASE_URL, SYMBOLS
@@ -33,12 +33,13 @@ def train_lightgbm(symbol: str):
         return
 
     # === Feature Engineering ===
-    df['rsi'] = talib.RSI(df['close'], timeperiod=14)
-    df['ema_fast'] = talib.EMA(df['close'], timeperiod=9)
-    df['ema_slow'] = talib.EMA(df['close'], timeperiod=21)
-    macd, signal, _ = talib.MACD(df['close'])
-    df['macd'] = macd
-    df['macd_signal'] = signal
+    df['rsi'] = RSIIndicator(close=df['close'], window=14).rsi()
+    df['ema_fast'] = EMAIndicator(close=df['close'], window=9).ema_indicator()
+    df['ema_slow'] = EMAIndicator(close=df['close'], window=21).ema_indicator()
+
+    macd_indicator = MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
+    df['macd'] = macd_indicator.macd()
+    df['macd_signal'] = macd_indicator.macd_signal()
 
     for lag in [1, 2, 3, 5, 10]:
         df[f'close_lag_{lag}'] = df['close'].shift(lag)
@@ -80,15 +81,7 @@ def train_lightgbm(symbol: str):
     joblib.dump(features, f"backend/ml/models/lightgbm_features_{symbol}.pkl")
     joblib.dump(scaler, f"backend/ml/models/lightgbm_scaler_{symbol}.pkl")
 
-    # === Plot Prediction ===
-    # plt.figure(figsize=(14, 6))
-    # plt.plot(y_test.values, label='Actual % Change')
-    # plt.plot(y_pred, label='Predicted % Change')
-    # plt.axhline(0, color='gray', linestyle='--', alpha=0.5)
-    # plt.title(f'{symbol.upper()} Model\nR²: {r2:.3f}, MSE: {mse:.6f}')
-    # plt.legend()
-    # plt.savefig(f'backend/ml/models/{symbol}_prediction_plot.png')
-    # plt.close()
+    
     
 
 if __name__ == "__main__":

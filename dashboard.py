@@ -6,6 +6,9 @@ from sqlalchemy import create_engine
 from datetime import datetime
 import pytz
 from streamlit_autorefresh import st_autorefresh
+import os , sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 
 from config.config import DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DATABASE_URL
 # === CONFIG ===
@@ -175,7 +178,35 @@ col1, col2, col3 = st.columns(3)
 col1.metric("💰 Balance", f"${balance:,.2f}")
 col2.metric("📈 Net PnL", f"${pnl:,.2f}")
 col3.metric("📊 Trades", f"{trades}")
+import os
+API_BASE = os.getenv("API_BASE", "http://localhost:8000")
+  # change if needed for Docker/remote
 
+def get_status():
+    try:
+        r = requests.get(f"{API_BASE}/status")
+        return r.json().get("running", False)
+    except:
+        return False
+
+def start_bot():
+    requests.post(f"{API_BASE}/start")
+
+def stop_bot():
+    requests.post(f"{API_BASE}/stop")
+
+if "bot_running" not in st.session_state:
+    st.session_state.bot_running = get_status()
+
+st.sidebar.subheader("🤖 Bot Controls")
+if not st.session_state.bot_running:
+    if st.sidebar.button("▶ Start Bot"):
+        start_bot()
+        st.session_state.bot_running = True
+else:
+    if st.sidebar.button("⏹ Stop Bot"):
+        stop_bot()
+        st.session_state.bot_running = False
 
 
 # === SIGNAL TABLE ===

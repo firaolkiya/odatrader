@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (no TA-Lib)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \

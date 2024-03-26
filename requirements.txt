@@ -1,28 +1,28 @@
 # Core
 pandas
 numpy
+matplotlib
 scikit-learn
 joblib
 sqlalchemy
 psycopg2-binary
 requests
+fastapi
 plotly
 streamlit
 lightgbm
 streamlit-autorefresh
-dotenv
+python-dotenv
 nltk
 httpx
-typing
+uvicorn
+
 # Binance API
 python-binance
 ta
 
 # Scheduler
 apscheduler
-
-# Machine Learning Models
-lightgbm
 
 # Websocket (used by python-binance)
 websockets
@@ -32,9 +32,6 @@ pytz
 
 # Logging & JSON utilities
 python-json-logger
-
-# File and OS utilities
-pathlib
 
 # Optional (only if you're using TensorFlow for LSTM in another phase)
 # tensorflow

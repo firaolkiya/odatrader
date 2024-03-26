@@ -10,7 +10,7 @@ from ta.trend import EMAIndicator, MACD
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from backend.db.market_data import get_latest_prices_df
-from backend.sentiments.reddit_scraper import get_reddit_sentiment_sync_safe
+
 from config.config import GROQ_API_KEY
 
 

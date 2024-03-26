@@ -9,7 +9,7 @@ Outputs:
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import os
 import sys
 from sqlalchemy import create_engine, text
@@ -138,17 +138,17 @@ def summarize(trades, equity):
     return pd.DataFrame(trades), equity
 
 # === Save Results ===
-def save_results(trade_df, equity):
-    trade_df.to_csv("backtest_results.csv", index=False)
-    plt.figure(figsize=(10, 5))
-    plt.plot(equity)
-    plt.title("Equity Curve")
-    plt.xlabel("Steps")
-    plt.ylabel("Balance")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("backtest_equity.png")
-    plt.show()
+# def save_results(trade_df, equity):
+#     trade_df.to_csv("backtest_results.csv", index=False)
+#     plt.figure(figsize=(10, 5))
+#     plt.plot(equity)
+#     plt.title("Equity Curve")
+#     plt.xlabel("Steps")
+#     plt.ylabel("Balance")
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.savefig("backtest_equity.png")
+#     plt.show()
 
 # === Main ===
 if __name__ == '__main__':
@@ -158,4 +158,4 @@ if __name__ == '__main__':
 
     trades, equity = run_backtest(df)
     trade_df, eq_curve = summarize(trades, equity)
-    save_results(trade_df, eq_curve)
+    # save_results(trade_df, eq_curve)
