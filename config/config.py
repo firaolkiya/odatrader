@@ -13,7 +13,7 @@ TRAIL_STOP_PCT=0.002          # Trailing Stop % (2%)
 STOP_LOSS_PCT=0.020           # Static Stop Loss (5%)
 TAKE_PROFIT_PCT=0.02         # Static Take Profit (4%)
 FIXED_RISK_PCT=0.01          # Risk per trade (1%)
-DAILY_LOSS_LIMIT=0.1         # Max 30% capital loss/day
+DAILY_LOSS_LIMIT=0.30         # Max 30% capital loss/day
 PROFIT_TRIGGER_PCT = 0.0045
 TRAILING_STOP_PCT = 0.0002
 # === DATABASE ===
