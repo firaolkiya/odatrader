@@ -10,7 +10,7 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL="postgresql://odatrade:odatrade@db:5432/postgres"
+      - DATABASE_URL=postgresql://odatrade:odatrade@db:5432/postgres
 
   db:
     image: postgres:13
@@ -19,7 +19,7 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: odatrade
-      POSTGRES_PASSWORD: "odatrade"
+      POSTGRES_PASSWORD: odatrade
     ports:
       - "5432:5432"
     volumes:

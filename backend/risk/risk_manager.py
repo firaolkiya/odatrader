@@ -30,6 +30,9 @@ trade_logs = defaultdict(list)
 # === Cumulative Daily PnL Tracker ===
 cumulative_daily_loss = defaultdict(float)
 
+# === Track last kill switch reset date ===
+last_reset_date = datetime.now(timezone.utc).date()
+
 # === Load Trailing Data from Disk ===
 def load_trailing_data():
     if os.path.exists(TRAILING_FILE):
@@ -59,17 +62,22 @@ def reset_trailing(symbol):
         save_trailing_data()
 
 def check_risk_limits(signal, price, current_position, balance):
+    global last_reset_date
+
     now = datetime.now(timezone.utc)
     today = now.date()
     symbol = signal.get("symbol", "").upper()
 
-    # Check if it's a new day to reset kill switch
-    deactivate_kill_switch()
+    # === Reset kill switch at the start of each new day ===
+    if today > last_reset_date:
+        deactivate_kill_switch()
+        last_reset_date = today
+        logging.info(f"[RISK] New day detected ({today}). Kill switch reset.")
 
     if is_kill_switch_active():
         return False, "[RISK] Kill Switch is Active. No trading allowed."
 
-    # Clean old logs for today
+    # === Clean old logs for today ===
     trade_logs[symbol] = [t for t in trade_logs[symbol] if t["timestamp"].date() == today]
 
     # === Max Trades Per Day ===
