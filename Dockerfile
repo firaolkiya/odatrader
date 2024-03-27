@@ -27,4 +27,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY . .
 
 # Run your entry script
-CMD ["python", "scalping_bot_framework.py"]
+CMD ["uvicorn", "backend.api.bot_controller:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -179,7 +179,7 @@ col1.metric("💰 Balance", f"${balance:,.2f}")
 col2.metric("📈 Net PnL", f"${pnl:,.2f}")
 col3.metric("📊 Trades", f"{trades}")
 import os
-API_BASE = os.getenv("API_BASE", "http://localhost:8000")
+API_BASE = os.getenv("API_BASE", "http://crypto_bot:8000")
   # change if needed for Docker/remote
 
 def get_status():

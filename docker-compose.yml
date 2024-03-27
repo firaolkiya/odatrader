@@ -24,6 +24,20 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard  # make sure your dashboard Dockerfile is saved with this name
+    container_name: streamlit_dashboard
+    restart: always
+    ports:
+      - "8501:8501"
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://odatrade:odatrade@db:5432/postgres
 
 volumes:
   db_data:

@@ -1,0 +1,8 @@
+streamlit
+pandas
+plotly
+requests
+sqlalchemy
+psycopg2-binary
+pytz
+streamlit-autorefresh
