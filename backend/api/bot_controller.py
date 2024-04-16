@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from scalping_bot_framework import run_bot, stop_bot
 
-app = FastAPI()
+app = FastAPI(title="OdaTrade API", version="1.0.0")
 bot_thread = None
 
 @app.post("/start")
