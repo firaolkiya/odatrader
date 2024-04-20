@@ -1,0 +1,9 @@
+/* OdaTrade dark theme */
+:root {
+    --odatrade-primary: #00d4aa;
+    --odatrade-bg: #0e1117;
+    --odatrade-surface: #1a1d24;
+    --odatrade-text: #fafafa;
+    --odatrade-accent: #ff6b6b;
+}
+.stApp { background-color: var(--odatrade-bg); }
