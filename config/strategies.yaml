@@ -1,0 +1,32 @@
+# OdaTrade strategy configuration
+defaults:
+  decision_threshold: 0.6
+  starting_balance: 5000
+
+strategies:
+  rsi:
+    enabled: true
+    weight: 0.1
+    oversold: 30
+    overbought: 70
+  macd:
+    enabled: true
+    weight: 0.1
+  ema_crossover:
+    enabled: true
+    weight: 0.1
+  bollinger:
+    enabled: true
+    weight: 0.1
+  stochastic:
+    enabled: true
+    weight: 0.1
+  adx:
+    enabled: true
+    weight: 0.1
+  ml:
+    enabled: true
+    weight: 0.2
+  gpt:
+    enabled: true
+    weight: 0.2
