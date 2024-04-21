@@ -38,3 +38,5 @@ python-json-logger
 
 # Optional (used in some environments to avoid warnings)
 tqdm
+
+pyyaml
