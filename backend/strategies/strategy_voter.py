@@ -1,3 +1,4 @@
+"""OdaTrade strategy voting engine."""
 import os
 import sys
 from typing import Dict, List
