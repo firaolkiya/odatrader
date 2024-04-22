@@ -23,9 +23,9 @@ SYMBOL_LIST = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
 API_BASE = "http://localhost:8000"  # use http://localhost:8000 if outside Docker
 
 # === STREAMLIT SETUP ===
-st.set_page_config(page_title="📊 Trading Bot Dashboard", layout="wide")
+st.set_page_config(page_title="OdaTrade Dashboard", layout="wide")
 st_autorefresh(interval=10_000, key="refresh")
-st.sidebar.header("⚙️ Controls")
+st.sidebar.header("OdaTrade Controls")
 
 symbol = st.sidebar.selectbox("Symbol", SYMBOL_LIST, index=0)
 interval = st.sidebar.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"], index=0)
