@@ -1,3 +1,4 @@
+"""OdaTrade live trading framework."""
 import os, sys, time
 from datetime import datetime, timezone
 import pandas as pd
