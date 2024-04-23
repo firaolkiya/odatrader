@@ -1,0 +1,1 @@
+"""OdaTrade alerts module."""

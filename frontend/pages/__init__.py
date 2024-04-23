@@ -1,0 +1,1 @@
+"""OdaTrade pages module."""
