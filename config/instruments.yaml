@@ -1,0 +1,77 @@
+instruments:
+  - symbol: BTCUSDT
+    venue: binance
+    asset_class: CRYPTO_SPOT
+    tick_size: 0.01
+    lot_size: 0.001
+    quote_ccy: USDT
+    leverage_allowed: false
+
+  - symbol: BTCUSDT-PERP
+    venue: binance
+    asset_class: PERP
+    tick_size: 0.01
+    lot_size: 0.001
+    quote_ccy: USDT
+    leverage_allowed: true
+    max_leverage: 20
+    margin_type: isolated
+
+  - symbol: ETHUSDT-PERP
+    venue: binance
+    asset_class: PERP
+    tick_size: 0.01
+    lot_size: 0.01
+    leverage_allowed: true
+    max_leverage: 20
+
+  - symbol: AAPL
+    venue: alpaca
+    asset_class: EQUITY
+    tick_size: 0.01
+    lot_size: 1
+    quote_ccy: USD
+
+  - symbol: TSLA
+    venue: alpaca
+    asset_class: EQUITY
+    tick_size: 0.01
+    lot_size: 1
+    quote_ccy: USD
+
+  - symbol: EURUSD
+    venue: oanda
+    asset_class: FX
+    tick_size: 0.00001
+    lot_size: 1000
+    quote_ccy: USD
+
+  - symbol: USDJPY
+    venue: oanda
+    asset_class: FX
+    tick_size: 0.001
+    lot_size: 1000
+    quote_ccy: JPY
+
+  - symbol: GBPUSD
+    venue: oanda
+    asset_class: FX
+    tick_size: 0.00001
+    lot_size: 1000
+    quote_ccy: USD
+
+pair_scoring:
+  select_threshold: 0.65
+  top_k: 3
+  weights:
+    liq: 0.30
+    spread: 0.25
+    vol: 0.20
+    depth: 0.15
+    corr: 0.10
+  maxima:
+    volume: 1000000000
+    spread: 0.01
+    vol: 2.0
+    depth: 100000
+    funding_rate: 0.001

@@ -1,0 +1,33 @@
+strategy:
+  weights:
+    rsi: 0.15
+    ema_cross: 0.20
+    macd: 0.15
+    supertrend: 0.15
+    bollinger: 0.10
+    ob_imbalance: 0.10
+    ml_trend: 0.15
+  base_entry: 0.70
+  base_exit: 0.50
+  entry_slope: 0.20
+  exit_slope: 0.10
+  sl_atr_mult:
+    calm: 1.5
+    volatile: 2.8
+  tp_rr: 1.6
+
+execution:
+  min_inter_trade_delay: 5
+  sl_cooldown_sec: 300
+  max_orders_per_min: 10
+  mode: paper
+
+risk:
+  max_leverage_global: 5
+  max_per_instrument: 3
+  risk_pct_per_trade: 0.005
+  max_dd_day: 0.15
+
+regime:
+  regime_vol_cap: 2.0
+  adx_trend_threshold: 25
