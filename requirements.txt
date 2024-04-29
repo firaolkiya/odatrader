@@ -15,6 +15,7 @@ streamlit-autorefresh
 python-dotenv
 nltk
 httpx
+python-multipart
 uvicorn
 
 # Binance API
@@ -40,3 +41,15 @@ python-json-logger
 tqdm
 
 pyyaml
+redis
+websocket-client
+psutil
+prometheus-client
+aiokafka
+nats-py
+scipy
+pyarrow
+pytest
+pytest-asyncio
+
+# Slim install for CI: pip install -r requirements-core.txt
