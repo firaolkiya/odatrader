@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odatrade-redis
+  namespace: odatrade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odatrade-redis
+  template:
+    metadata:
+      labels:
+        app: odatrade-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          args: ["--appendonly", "yes", "--maxmemory", "256mb"]
+          resources:
+            limits:
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odatrade-redis
+  namespace: odatrade
+spec:
+  selector:
+    app: odatrade-redis
+  ports:
+    - port: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: odatrade-postgres
+  namespace: odatrade
+spec:
+  serviceName: odatrade-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odatrade-postgres
+  template:
+    metadata:
+      labels:
+        app: odatrade-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: odatrade
+            - name: POSTGRES_USER
+              value: odatrade
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: odatrade-secrets
+                  key: db-password
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

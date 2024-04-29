@@ -1,0 +1,59 @@
+{
+  "family": "odatrade",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "odatrade-api",
+      "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/odatrade-api:latest",
+      "essential": true,
+      "portMappings": [{"containerPort": 8000, "protocol": "tcp"}],
+      "environment": [
+        {"name": "REDIS_URL", "value": "redis://odatrade-redis.odatrade.local:6379/0"},
+        {"name": "EVENT_BACKEND", "value": "redis"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:odatrade/database-url"},
+        {"name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:odatrade/jwt-secret"},
+        {"name": "BINANCE_API_KEY", "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:odatrade/binance-key"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/odatrade",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "api"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3
+      }
+    },
+    {
+      "name": "odatrade-bot",
+      "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/odatrade-bot:latest",
+      "essential": true,
+      "command": ["python", "odatrade_cli.py", "start"],
+      "environment": [
+        {"name": "REDIS_URL", "value": "redis://odatrade-redis.odatrade.local:6379/0"},
+        {"name": "EVENT_BACKEND", "value": "redis"}
+      ],
+      "secrets": [
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:odatrade/database-url"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/odatrade",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "bot"
+        }
+      }
+    }
+  ]
+}

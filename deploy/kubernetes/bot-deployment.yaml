@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odatrade-bot
+  namespace: odatrade
+  labels:
+    app: odatrade-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odatrade-bot
+  template:
+    metadata:
+      labels:
+        app: odatrade-bot
+    spec:
+      containers:
+        - name: bot
+          image: odatrade/bot:latest
+          command: ["python", "odatrade_cli.py", "start"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: odatrade-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: "redis://odatrade-redis:6379/0"
+            - name: EVENT_BACKEND
+              value: "redis"
+            - name: BOT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          volumeMounts:
+            - name: models
+              mountPath: /app/models
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: odatrade-models-pvc

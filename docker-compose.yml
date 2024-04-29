@@ -1,19 +1,48 @@
 version: "3.9"
 
 services:
-  odatrade-bot:
+  odatrade-api:
     build: .
-    container_name: odatrade_bot
+    container_name: odatrade_api
     restart: always
-    volumes:
-      - .:/app
-    depends_on:
-      - odatrade-db
+    ports:
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://odatrade:odatrade@odatrade-db:5432/odatrade
+      - REDIS_URL=redis://odatrade-redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-odatrade-dev-secret}
+      - EVENT_BACKEND=redis
+    depends_on:
+      odatrade-db:
+        condition: service_healthy
+      odatrade-redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  odatrade-bot:
+    build: .
+    container_name: odatrade_bot_worker
+    restart: always
+    command: ["python", "odatrade_cli.py", "start"]
+    environment:
+      - DATABASE_URL=postgresql://odatrade:odatrade@odatrade-db:5432/odatrade
+      - REDIS_URL=redis://odatrade-redis:6379/0
+      - EVENT_BACKEND=redis
+    depends_on:
+      - odatrade-api
+      - odatrade-redis
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
 
   odatrade-db:
-    image: postgres:13
+    image: postgres:15
     container_name: odatrade_db
     restart: always
     environment:
@@ -23,7 +52,27 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - odatrade_data:/var/lib/postgresql/data
+      - odatrade_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odatrade"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  odatrade-redis:
+    image: redis:7-alpine
+    container_name: odatrade_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - odatrade_redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   odatrade-dashboard:
     build:
@@ -33,10 +82,14 @@ services:
     restart: always
     ports:
       - "8501:8501"
+    environment:
+      - API_BASE=http://odatrade-api:8000
+      - REDIS_URL=redis://odatrade-redis:6379/0
     depends_on:
-      - odatrade-db
+      - odatrade-api
     volumes:
       - .:/app
 
 volumes:
-  odatrade_data:
+  odatrade_pg_data:
+  odatrade_redis_data:
