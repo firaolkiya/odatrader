@@ -14,8 +14,10 @@ pages = {
         st.Page("pages/05_backtest.py", title="Backtest", icon="🧪"),
         st.Page("pages/06_analytics.py", title="Analytics", icon="📈"),
         st.Page("pages/07_ml.py", title="ML Models", icon="🤖"),
+        st.Page("pages/13_monitoring.py", title="Monitoring", icon="📡"),
     ],
     "Config": [
+        st.Page("pages/12_bots.py", title="Bots", icon="🤖"),
         st.Page("pages/08_strategies.py", title="Strategies", icon="⚙️"),
         st.Page("pages/09_alerts.py", title="Alerts", icon="🔔"),
         st.Page("pages/10_risk.py", title="Risk", icon="🛡️"),
