@@ -32,6 +32,15 @@ class TestOrderManager:
         mgr.submit(o)
         filled = mgr.fill(o.id, 0.5, 50000)
         assert filled.status == OrderStatus.PARTIAL
+        assert filled.avg_fill_price == 50000
+
+    def test_vwap_two_fills(self, mgr):
+        o = Order("btcusdt", OrderSide.BUY, 1.0)
+        mgr.submit(o)
+        mgr.fill(o.id, 0.4, 100.0)
+        filled = mgr.fill(o.id, 0.6, 110.0)
+        assert filled.status == OrderStatus.FILLED
+        assert abs(filled.avg_fill_price - 106.0) < 0.01
 
     def test_cancel(self, mgr):
         o = Order("btcusdt", OrderSide.BUY, 0.1)

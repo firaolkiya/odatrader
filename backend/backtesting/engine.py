@@ -9,11 +9,18 @@ class BacktestEngine:
         self.trades: List[Dict] = []
         self.equity_curve: List[float] = [initial_balance]
 
-    def run(self, df: pd.DataFrame, signal_fn: Callable) -> Dict:
+    def run(self, df: pd.DataFrame, signal_fn: Callable, strict_no_lookahead: bool = False,
+            leakage_guard=None) -> Dict:
         position = None
         for i in range(1, len(df)):
             row, prev = df.iloc[i], df.iloc[i - 1]
-            signal = signal_fn(row, prev)
+            if strict_no_lookahead and leakage_guard is not None:
+                leakage_guard.set_bar(i)
+                signal = signal_fn(row, prev, history=df.iloc[: i + 1])
+            elif strict_no_lookahead:
+                signal = signal_fn(row, prev, history=df.iloc[: i + 1])
+            else:
+                signal = signal_fn(row, prev)
             price = row["close"]
             if signal == "BUY" and position is None:
                 position = {"entry": price, "qty": self.balance * 0.1 / price}

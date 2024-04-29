@@ -4,6 +4,7 @@ from typing import Callable, Dict, List
 import pandas as pd
 from backend.backtesting.engine import BacktestEngine
 from backend.backtesting.metrics import compute_metrics
+from backend.backtesting.leakage_guard import run_guarded_backtest
 from backend.exec.fee_model import FeeModel
 
 logger = logging.getLogger("odatrade.walk_forward")
@@ -28,7 +29,7 @@ class WalkForwardTester:
             train_end = int(len(window_df) * self.train_pct)
             test_df = window_df.iloc[train_end:]
             engine = BacktestEngine(initial_balance=self.initial_balance)
-            result = engine.run(test_df, signal_fn)
+            result = run_guarded_backtest(engine, test_df, signal_fn)
             pnls = [t["pnl"] for t in engine.trades]
             metrics = compute_metrics(engine.equity_curve, pnls)
             results.append({

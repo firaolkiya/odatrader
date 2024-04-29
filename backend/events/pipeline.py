@@ -11,6 +11,7 @@ from backend.events.handlers.strategy import StrategyHandler
 from backend.events.handlers.risk import RiskHandler
 from backend.events.handlers.orders import OrderHandler
 from backend.events.handlers.pnl import PnLHandler
+from backend.events.idempotency import EventDeduplicator
 
 logger = logging.getLogger("odatrade.pipeline")
 
@@ -29,7 +30,17 @@ class TradingPipeline:
         self.bus = event_bus
         self.state = state_store
         self._running = False
+        self._dedup = EventDeduplicator()
         self._handlers = self._build_handlers()
+
+    def _idempotent(self, handler):
+        async def wrapped(event: Event):
+            if self._dedup.is_duplicate(event):
+                logger.debug("[%s] duplicate event skipped: %s", self.bot_id, event.type)
+                return
+            self._dedup.mark(event)
+            return await handler(event)
+        return wrapped
 
     def _build_handlers(self) -> Dict[str, Any]:
         return {
@@ -44,8 +55,8 @@ class TradingPipeline:
         h = self._handlers
         self.bus.on(EventType.MARKET_DATA, h["market_data"].handle)
         self.bus.on(EventType.FEATURES_READY, h["strategy"].handle)
-        self.bus.on(EventType.STRATEGY_SIGNAL, h["risk"].handle)
-        self.bus.on(EventType.RISK_APPROVED, h["orders"].handle)
+        self.bus.on(EventType.STRATEGY_SIGNAL, self._idempotent(h["risk"].handle))
+        self.bus.on(EventType.RISK_APPROVED, self._idempotent(h["orders"].handle))
         self.bus.on(EventType.ORDER_FILLED, h["pnl"].handle)
         self.bus.on(EventType.KILL_SWITCH, self._on_kill_switch)
 

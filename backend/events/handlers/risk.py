@@ -50,16 +50,33 @@ class RiskHandler:
             return
 
         from backend.risk.exposure import check_exposure
+        from backend.risk.portfolio_netting import check_portfolio_limits, net_positions
+
         positions = self.state.get_positions(self.bot_id)
-        exposure_map = {sym: pos.get("quantity", 0) * pos.get("avg_entry", 0) for sym, pos in positions.items()}
+        notionals = net_positions({
+            sym: (pos.get("quantity", 0), pos.get("avg_entry", 0) or pos.get("last_price", 0))
+            for sym, pos in positions.items()
+        })
         exposure_check = check_exposure(
-            exposure_map,
+            {k: abs(v) for k, v in notionals.items()},
             max_per_symbol=self.config.get("max_per_symbol_exposure", 0.3),
             max_total=self.config.get("max_total_exposure", 1.0),
         )
         if not exposure_check["ok"]:
             await self._reject(event, f"exposure: {exposure_check['violations']}")
             return
+
+        corr_matrix = self.config.get("correlation_matrix", {})
+        if corr_matrix:
+            port_check = check_portfolio_limits(
+                {k: abs(v) for k, v in notionals.items()},
+                corr_matrix,
+                max_per_symbol=self.config.get("max_per_symbol_exposure", 0.3),
+                max_correlated_total=self.config.get("max_correlated_exposure", 1.0),
+            )
+            if not port_check["ok"]:
+                await self._reject(event, f"portfolio: {port_check['violations']}")
+                return
 
         self._daily_trades += 1
         await self.bus.emit(Event(

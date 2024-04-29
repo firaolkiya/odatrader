@@ -17,5 +17,8 @@ backend/ml/models/*.h5
 ui/node_modules/
 ui/dist/
 scripts/generate_*.py
+!scripts/harbor-preflight.sh
+!scripts/verify-order-lifecycle.sh
+!scripts/run-pipeline-smoke.sh
 *.pdf
 references/

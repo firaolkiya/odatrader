@@ -8,18 +8,37 @@ cd "$ROOT"
 
 BASE_COMMIT="${1:-HEAD}"
 TEST_PATCH="${2:-}"
+ORIG_REF="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)"
+ORIG_SHA="$(git rev-parse HEAD)"
+STASHED=0
+
+cleanup() {
+  cd "$ROOT"
+  if git rev-parse --verify "$ORIG_SHA" >/dev/null 2>&1; then
+    git checkout "$ORIG_SHA" >/dev/null 2>&1 || git checkout "$ORIG_REF" >/dev/null 2>&1 || true
+  fi
+  if [[ "$STASHED" -eq 1 ]]; then
+    git stash pop >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
 if ! git rev-parse --verify "$BASE_COMMIT" >/dev/null 2>&1; then
   echo "ERROR: unknown base commit: $BASE_COMMIT" >&2
   exit 1
 fi
 
+echo "==> Stashing working tree"
+if git stash push -u -m "validate-at-base-$(date +%s)" >/dev/null 2>&1; then
+  STASHED=1
+fi
+
 echo "==> Checking out base commit: $BASE_COMMIT"
-git stash push -u -m "validate-at-base-$(date +%s)" 2>/dev/null || true
 git checkout "$BASE_COMMIT"
 
 if [[ -n "$TEST_PATCH" && -f "$TEST_PATCH" ]]; then
   echo "==> Applying test patch: $TEST_PATCH"
+  git apply --check "$TEST_PATCH"
   git apply "$TEST_PATCH"
 fi
 
