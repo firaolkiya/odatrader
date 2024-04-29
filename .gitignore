@@ -1,4 +1,5 @@
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -12,3 +13,9 @@ backend/risk/kill_switch.flag
 kill_switch.flag
 backend/ml/models/*.pkl
 backend/ml/models/*.h5
+.pytest_cache/
+ui/node_modules/
+ui/dist/
+scripts/generate_*.py
+*.pdf
+references/

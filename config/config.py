@@ -34,6 +34,10 @@ REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
 REDDIT_SECRET_KEY = os.getenv("REDDIT_SECRET_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "odatrade-dev-secret-change-me")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+EVENT_BACKEND = os.getenv("EVENT_BACKEND", "redis")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+NATS_SERVERS = os.getenv("NATS_SERVERS", "nats://localhost:4222")
 
 DB_PARAMS = {
     "dbname": DB_NAME,

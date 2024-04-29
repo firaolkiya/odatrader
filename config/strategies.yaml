@@ -3,6 +3,12 @@ defaults:
   decision_threshold: 0.6
   starting_balance: 5000
 
+adaptive:
+  base_entry: 0.70
+  base_exit: 0.50
+  entry_slope: 0.20
+  exit_slope: 0.10
+
 strategies:
   rsi:
     enabled: true

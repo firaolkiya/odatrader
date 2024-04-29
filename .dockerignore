@@ -7,6 +7,12 @@ __pycache__/
 *.log
 .idea/
 .vscode/
-.git
-.gitignore
-tests/
+venv/
+.venv/
+.git/
+.pytest_cache/
+ui/node_modules/
+ui/dist/
+scripts/generate_*.py
+*.pdf
+references/
