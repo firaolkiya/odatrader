@@ -23,8 +23,7 @@ adaptive strategy voting, and multi-asset execution.
 | `odatrade/core/` | Event bus, Redis client, validators, settings |
 | `frontend/` | Streamlit multi-page dashboard |
 | `ui/` | React SPA (Vite + Tailwind) |
-| `tests/` | Pytest suite (290+ tests) |
-| `afterquerytasks/` | SWE-bench-style task definitions |
+| `tests/` | Pytest suite (300+ tests) |
 
 ## Data Flow
 
@@ -45,8 +44,8 @@ Market Gateway → market_data event → Feature Engineering
 - `config/strategies.yaml` — per-strategy parameters
 - `config/.env.example` — environment variable template
 
-## Testing & Verification
+## Testing
 
-- `requirements-core.txt` — minimal deps for CI and Harbor verifier
-- `validate-at-base.sh` — reset to base commit and run pytest
-- `.github/workflows/ci.yml` — GitHub Actions test pipeline
+- `requirements-core.txt` — slim dependency set for CI
+- `validate-at-base.sh` — run tests at a specific git revision
+- `.github/workflows/ci.yml` — GitHub Actions pipeline

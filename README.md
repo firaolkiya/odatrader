@@ -13,7 +13,6 @@ backtesting, and real-time dashboards.
 - FastAPI REST + WebSocket API with JWT auth and Prometheus metrics
 - Streamlit dashboard (14 pages) and React SPA (`ui/`)
 - Multi-bot orchestration with Redis-backed event bus
-- AfterQuery task harness for SWE-bench-style evaluation
 
 ## Quick Start
 
@@ -43,13 +42,13 @@ pytest tests/ -q
 # Docker test profile (offline, SQLite + Redis)
 docker compose -f docker-compose.test.yml run --rm odatrade-test
 
-# Verify at a specific base commit (Harbor / AfterQuery)
+# Regression check at a specific commit
 ./validate-at-base.sh HEAD
 ```
 
 ## Architecture
 
-See `docs/ARCHITECTURE.md` and `afterquerytasks/README.md`.
+See `docs/ARCHITECTURE.md`.
 
 ## Deployment
 

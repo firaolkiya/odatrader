@@ -1,4 +1,4 @@
-# Minimal dependencies for API, engine, and pytest (CI / Harbor verifier)
+# Slim dependencies for API, engine, and pytest (CI / Docker test image)
 pandas
 numpy
 scipy

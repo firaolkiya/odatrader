@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Reset to a base commit, optionally apply a test patch, and run the verifier suite.
-# Usage: ./validate-at-base.sh [base_commit] [test_patch]
+# Run the test suite at a specific git revision (regression / bisect helper).
+# Usage: ./validate-at-base.sh [commit] [optional_patch]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -24,7 +24,7 @@ cleanup() {
 trap cleanup EXIT
 
 if ! git rev-parse --verify "$BASE_COMMIT" >/dev/null 2>&1; then
-  echo "ERROR: unknown base commit: $BASE_COMMIT" >&2
+  echo "ERROR: unknown commit: $BASE_COMMIT" >&2
   exit 1
 fi
 
@@ -33,16 +33,16 @@ if git stash push -u -m "validate-at-base-$(date +%s)" >/dev/null 2>&1; then
   STASHED=1
 fi
 
-echo "==> Checking out base commit: $BASE_COMMIT"
+echo "==> Checking out: $BASE_COMMIT"
 git checkout "$BASE_COMMIT"
 
 if [[ -n "$TEST_PATCH" && -f "$TEST_PATCH" ]]; then
-  echo "==> Applying test patch: $TEST_PATCH"
+  echo "==> Applying patch: $TEST_PATCH"
   git apply --check "$TEST_PATCH"
   git apply "$TEST_PATCH"
 fi
 
-echo "==> Installing test dependencies"
+echo "==> Installing dependencies"
 python3 -m pip install -q -r requirements-core.txt
 
 echo "==> Running pytest"
