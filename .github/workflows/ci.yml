@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-core.txt
+
+      - name: Run pytest
+        env:
+          DATABASE_URL: sqlite:///odatrade_test.db
+          JWT_SECRET: test-secret
+          MODE: paper
+          REDIS_URL: redis://localhost:6379/0
+        run: pytest tests/ -q --tb=short

@@ -1,0 +1,24 @@
+# Minimal dependencies for API, engine, and pytest (CI / Harbor verifier)
+pandas
+numpy
+scipy
+fastapi
+uvicorn
+httpx
+python-multipart
+python-dotenv
+pyyaml
+redis
+ta
+pytest
+pytest-asyncio
+requests
+prometheus-client
+psutil
+websocket-client
+pytz
+apscheduler
+python-json-logger
+pydantic
+sqlalchemy
+joblib

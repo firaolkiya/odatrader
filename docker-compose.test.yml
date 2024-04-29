@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  odatrade-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - DATABASE_URL=sqlite:///odatrade_test.db
+      - JWT_SECRET=test-secret
+      - REDIS_URL=redis://odatrade-test-redis:6379/0
+      - MODE=paper
+      - EVENT_BACKEND=memory
+    depends_on:
+      odatrade-test-redis:
+        condition: service_started
+
+  odatrade-test-redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
