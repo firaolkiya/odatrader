@@ -4,6 +4,10 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+config/.env
+**/.env
+**/.env.*
+!.env.example
 *.log
 .idea/
 .vscode/
@@ -16,6 +20,7 @@ backend/ml/models/*.h5
 .pytest_cache/
 ui/node_modules/
 ui/dist/
+ui/src/mock/
 scripts/generate_*.py
 !scripts/ci-preflight.sh
 !scripts/verify-order-lifecycle.sh

@@ -2,4 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #0e1117; color: #fafafa; }
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #0e1117;
+    color: #fafafa;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgba(0, 212, 170, 0.35);
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
