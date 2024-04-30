@@ -1,4 +1,4 @@
-"""Leverage-aware position sizing (Milestone 3)."""
+"""Leverage-aware position sizing for perpetual contracts."""
 import logging
 
 logger = logging.getLogger("odatrade.leverage")

@@ -1,4 +1,4 @@
-"""1-minute EMA scalper strategy (Milestone 3 spec)."""
+"""1-minute EMA scalper strategy for fast markets."""
 import time
 from backend.strategies.base_strategy import BaseStrategy
 

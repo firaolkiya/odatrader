@@ -55,7 +55,7 @@ class Instrument:
         )
 
 
-# Default instrument universe from Milestone 3
+# Default instrument universe
 DEFAULT_INSTRUMENTS: List[Instrument] = [
     Instrument("BTCUSDT", "binance", AssetClass.CRYPTO_SPOT, 0.01, 0.001, "USDT"),
     Instrument("ETHUSDT", "binance", AssetClass.CRYPTO_SPOT, 0.01, 0.01, "USDT"),

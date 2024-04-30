@@ -1,4 +1,4 @@
-"""Pair scoring algorithm for instrument selection (Milestone 3)."""
+"""Pair scoring algorithm for instrument selection."""
 import math
 import logging
 from dataclasses import dataclass, field

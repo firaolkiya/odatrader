@@ -9,8 +9,8 @@ services:
     restart: always
     environment:
       POSTGRES_DB: postgres
-      POSTGRES_USER: odatrade
-      POSTGRES_PASSWORD: odatrade
+      POSTGRES_USER: ${POSTGRES_USER:-odatrade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odatrade}
     ports:
       - "6543:6543"
     volumes:
@@ -29,7 +29,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://odatrade:odatrade@db:5432/postgres
+      - DATABASE_URL=${DATABASE_URL:-postgresql://odatrade:odatrade@db:5432/postgres}
 
 volumes:
   db_data:

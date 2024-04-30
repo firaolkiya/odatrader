@@ -12,7 +12,7 @@ logger = logging.getLogger("odatrade.adaptive_voter")
 
 class AdaptiveVoter:
     """
-    Dynamic confidence voting per Milestone 3 spec:
+    Dynamic confidence voting with regime-aware thresholds:
     entry_threshold = base_entry - entry_slope * regime
     exit_threshold  = base_exit  + exit_slope  * regime
     """
