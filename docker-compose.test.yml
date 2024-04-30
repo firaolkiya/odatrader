@@ -4,7 +4,7 @@ services:
   odatrade-test:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile
     environment:
       - DATABASE_URL=sqlite:///odatrade_test.db
       - JWT_SECRET=test-secret

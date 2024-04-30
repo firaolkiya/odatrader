@@ -9,10 +9,13 @@ FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }
 pass() { echo "PASS: $1"; }
 
+root_dockerfiles=$(find . -maxdepth 1 -name 'Dockerfile*' | wc -l)
+[[ "$root_dockerfiles" -eq 1 ]] || fail "expected 1 Dockerfile at repo root, found $root_dockerfiles"
+
 if [[ ! -f Dockerfile ]]; then
   fail "Dockerfile missing"
 else
-  pass "Dockerfile exists"
+  pass "single root Dockerfile exists"
   size=$(wc -c < Dockerfile | tr -d ' ')
   lines=$(wc -l < Dockerfile | tr -d ' ')
   runs=$(grep -cE '^[[:space:]]*RUN[[:space:]]' Dockerfile || true)

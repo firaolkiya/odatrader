@@ -76,8 +76,8 @@ services:
 
   odatrade-dashboard:
     build:
-      context: .
-      dockerfile: Dockerfile.dashboard
+      context: ./frontend
+      dockerfile: streamlit.dockerfile
     container_name: odatrade_dashboard
     restart: always
     ports:

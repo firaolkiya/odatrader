@@ -19,7 +19,7 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: Dockerfile.dashboard  # make sure your dashboard Dockerfile is saved with this name
+      dockerfile: streamlit.dockerfile
     container_name: streamlit_dashboard
     restart: always
     ports:

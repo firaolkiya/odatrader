@@ -41,7 +41,7 @@ services:
         type: SECRET
 
   - name: dashboard
-    dockerfile_path: Dockerfile.dashboard
+    dockerfile_path: frontend/streamlit.dockerfile
     http_port: 8501
     instance_count: 1
     instance_size_slug: basic-xxs
